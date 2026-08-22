@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DashboardShell } from '../shared/dashboard-shell'
 import { colorDeEstado } from '@/components/campo/lotes-estado'
+import { AvisosCampo } from '@/components/campo/AvisosCampo'
 import {
   LayoutDashboard, Sprout, Warehouse, Mic, AlertTriangle, ArrowRight,
   Droplet, Snowflake, Ruler, Scale,
@@ -200,6 +201,9 @@ export default function AgroDashboard() {
               <Cifra key={l.estado} titulo={l.estado.replace('_', ' ')} valor={l.n} detalle={`${l.ha} ha`} />
             ))}
           </div>
+
+          {/* Lo que detectaron las fotos y nadie fue a mirar todavía */}
+          <AvisosCampo compacto />
 
           {sinActividad > 0 && (
             <Card className="border-amber-300 dark:border-amber-800">

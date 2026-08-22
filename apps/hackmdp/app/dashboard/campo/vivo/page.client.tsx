@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import {
   PlanoPivote, type LotePivote, type DispositivoEnPlano, type FotoEnPlano,
 } from '@/components/campo/PlanoPivote'
+import { AvisosCampo } from '@/components/campo/AvisosCampo'
 import { useGps } from '@/lib/hooks/use-gps'
 import {
   usePresencia, idDispositivo, nombreGuardado, guardarNombre, miniaturaDe,
@@ -354,6 +355,9 @@ export default function VivoPageClient() {
               )}
             </CardContent>
           </Card>
+
+          {/* Los problemas que hay que ir a revisar */}
+          <AvisosCampo compacto />
 
           {/* Fotos que van saltando */}
           <Card>
