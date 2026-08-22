@@ -2,6 +2,10 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // /_next/image devuelve 400 ("received null" al leer el archivo local) en
+  // este entorno con Next 16 + Turbopack, con o sin sharp instalado. Las
+  // imágenes que usamos son íconos chicos: servirlas sin optimizar es gratis.
+  images: { unoptimized: true },
   // El dev server se expone por túnel de Cloudflare para demos desde otra máquina
   // (el dictado por voz necesita HTTPS: Chrome no da micrófono en contexto inseguro).
   allowedDevOrigins: ['*.trycloudflare.com', '*.lhr.life', '*.serveo.net'],
