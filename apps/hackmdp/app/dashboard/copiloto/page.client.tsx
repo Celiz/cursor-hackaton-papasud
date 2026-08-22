@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useSpeechRecognition } from '@/lib/hooks/use-speech-recognition'
+import { unirDictado } from '@/lib/campo/dictado'
 import {
   Sparkles, Mic, MicOff, Loader2, Database, Send, User, AlertTriangle,
 } from 'lucide-react'
@@ -43,7 +44,7 @@ export default function CopilotoPageClient() {
     lang: 'es-AR',
     continuous: false,
     onResult: useCallback((frase: string) => {
-      setPregunta((prev) => (prev ? `${prev} ${frase.trim()}` : frase.trim()))
+      setPregunta((prev) => unirDictado(prev, frase))
     }, []),
   })
 

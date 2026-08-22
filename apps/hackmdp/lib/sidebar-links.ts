@@ -1917,6 +1917,7 @@ const AGRO_SECTION_CAMPO: Section = {
   icon: Sprout,
   url: `/dashboard/campo/pivotes`,
   items: [
+    { title: "En vivo", url: `/dashboard/campo/vivo`, icon: Radio },
     { title: "Pivotes", url: `/dashboard/campo/pivotes`, icon: Target },
     { title: "Foto del cultivo", url: `/dashboard/campo/foto`, icon: Eye },
     { title: "Mapa de lotes", url: `/dashboard/campo/mapa`, icon: MapPin },

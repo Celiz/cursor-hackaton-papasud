@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useSpeechRecognition } from '@/lib/hooks/use-speech-recognition'
+import { unirDictado } from '@/lib/campo/dictado'
 import useSWR, { mutate as globalMutate } from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -99,9 +100,9 @@ export default function OrdenesPageClient() {
     lang: 'es-AR',
     continuous: true,
     onResult: useCallback((frase: string) => {
-      const limpia = frase.trim()
-      if (!limpia) return
-      setTexto((prev) => (prev ? `${prev} ${limpia}` : limpia))
+      // `unirDictado` es la última red contra el reenvío de Chrome: si la frase
+      // ya es el final de lo escrito, no se vuelve a pegar.
+      setTexto((prev) => unirDictado(prev, frase))
     }, []),
   })
 

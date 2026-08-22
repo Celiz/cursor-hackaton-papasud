@@ -1,6 +1,12 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import {
+  procesarResultados,
+  estadoInicial,
+  type EstadoDictado,
+  type ResultadoVoz,
+} from "@/lib/campo/dictado"
 
 // Web Speech API type declarations (not included in all TS dom libs)
 interface SpeechRecognitionAlternative {
@@ -85,6 +91,9 @@ export function useSpeechRecognition({
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const onResultRef = useRef(onResult)
+  // Qué índices ya se emitieron. Chrome reenvía resultados que ya dio por
+  // finales, y sin esto la misma frase entra dos y tres veces.
+  const dictadoRef = useRef<EstadoDictado>(estadoInicial)
 
   // Keep onResult ref up to date without re-creating recognition
   useEffect(() => {
@@ -106,27 +115,23 @@ export function useSpeechRecognition({
     recognition.interimResults = true
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let interimTranscript = ""
-      let finalTranscript = ""
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i]
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript
-        } else {
-          interimTranscript += result[0].transcript
-        }
+      // Se recorre TODO `results`, no desde `resultIndex`: en dictado continuo
+      // Chrome deja ese índice quieto y reenvía finales ya entregados. Quién
+      // decide qué es novedad es `procesarResultados`, por índice.
+      const resultados: ResultadoVoz[] = []
+      for (let i = 0; i < event.results.length; i++) {
+        const r = event.results[i]
+        resultados.push({ indice: i, texto: r[0].transcript, esFinal: r.isFinal })
       }
 
-      // Show interim results for real-time feedback
-      if (interimTranscript) {
-        setTranscript(interimTranscript)
-      }
+      const salida = procesarResultados(resultados, dictadoRef.current)
+      dictadoRef.current = salida.estado
 
-      // Fire callback and update transcript only for final results
-      if (finalTranscript) {
-        setTranscript(finalTranscript)
-        onResultRef.current?.(finalTranscript)
+      if (salida.parcial) setTranscript(salida.parcial)
+
+      if (salida.definitivo) {
+        setTranscript(salida.definitivo)
+        onResultRef.current?.(salida.definitivo)
       }
     }
 
@@ -159,6 +164,8 @@ export function useSpeechRecognition({
     if (!recognition || isListening) return
 
     setTranscript("")
+    // Sesión nueva: los índices arrancan de cero otra vez.
+    dictadoRef.current = estadoInicial
     try {
       recognition.start()
       setIsListening(true)

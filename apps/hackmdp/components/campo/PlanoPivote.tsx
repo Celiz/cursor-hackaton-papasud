@@ -21,6 +21,32 @@ export interface LotePivote {
   variedad?: string | null
 }
 
+/** Un teléfono en el campo, ubicado dentro del pivote. */
+export interface DispositivoEnPlano {
+  dispositivo: string
+  nombre: string | null
+  /** Radio normalizado 0..1 y rumbo en grados de brújula. */
+  radio: number
+  rumbo: number
+  precision_m?: number | null
+  hace_seg?: number
+  lote?: string | null
+  /** Se está moviendo: se dibuja con estela. */
+  moviendose?: boolean
+}
+
+/** Una foto sacada en el campo, para que aparezca donde se tomó. */
+export interface FotoEnPlano {
+  id: string
+  radio: number
+  rumbo: number
+  miniatura?: string | null
+  hallazgo?: string | null
+  urgente?: boolean
+  hace_seg?: number
+  lote?: string | null
+}
+
 export interface PosicionEnPlano {
   /** Radio normalizado 0..1 desde el centro del pivote. */
   radio: number
@@ -55,11 +81,24 @@ interface Props {
   onSeleccionar?: (l: LotePivote) => void
   /** Atenúa los lotes que no están seleccionados. */
   resaltarSeleccion?: boolean
+  /** Todos los teléfonos que están en este pivote ahora. */
+  dispositivos?: DispositivoEnPlano[]
+  /** Fotos sacadas en este pivote. */
+  fotos?: FotoEnPlano[]
+  onFoto?: (f: FotoEnPlano) => void
   size?: number
 }
 
+/** Color estable por dispositivo, para distinguir a cada persona. */
+function colorDeDispositivo(id: string): string {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 37 + id.charCodeAt(i)) % 360
+  return `hsl(${h} 78% 45%)`
+}
+
 export function PlanoPivote({
-  pivote, lotes, posicion, seleccionado, onSeleccionar, resaltarSeleccion, size = 420,
+  pivote, lotes, posicion, seleccionado, onSeleccionar, resaltarSeleccion,
+  dispositivos = [], fotos = [], onFoto, size = 420,
 }: Props) {
   const cx = size / 2
   const cy = size / 2
@@ -161,6 +200,86 @@ export function PlanoPivote({
           >
             {c}
           </text>
+        )
+      })}
+
+      {/* Fotos sacadas en el campo */}
+      {fotos.map((f) => {
+        const p = puntoEnCirculo(cx, cy, Math.min(1, f.radio) * radio, f.rumbo)
+        const reciente = (f.hace_seg ?? 999) < 60
+        return (
+          <g
+            key={f.id}
+            className={onFoto ? 'cursor-pointer' : undefined}
+            onClick={() => onFoto?.(f)}
+          >
+            {reciente && (
+              <circle cx={p.x} cy={p.y} r={14} fill="none"
+                      stroke={f.urgente ? 'rgb(220 38 38)' : 'rgb(37 99 235)'} strokeWidth={2}>
+                {/* El pulso solo mientras es reciente: así se ve "saltar" la foto nueva */}
+                <animate attributeName="r" values="8;22;8" dur="1.6s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.9;0;0.9" dur="1.6s" repeatCount="indefinite" />
+              </circle>
+            )}
+            <rect
+              x={p.x - 9} y={p.y - 9} width={18} height={18} rx={3}
+              fill="white"
+              stroke={f.urgente ? 'rgb(220 38 38)' : 'rgb(82 82 91)'}
+              strokeWidth={f.urgente ? 2.5 : 1.2}
+            />
+            {f.miniatura && (
+              <image
+                href={f.miniatura}
+                x={p.x - 7.5} y={p.y - 7.5} width={15} height={15}
+                preserveAspectRatio="xMidYMid slice"
+              />
+            )}
+            <title>
+              {f.hallazgo ?? 'Foto'}{f.lote ? ` · ${f.lote}` : ''}
+              {f.hace_seg !== undefined ? ` · hace ${f.hace_seg}s` : ''}
+            </title>
+          </g>
+        )
+      })}
+
+      {/* Los teléfonos que están caminando en el campo */}
+      {dispositivos.map((d) => {
+        const p = puntoEnCirculo(cx, cy, Math.min(1, d.radio) * radio, d.rumbo)
+        const color = colorDeDispositivo(d.dispositivo)
+        const rPrecision =
+          d.precision_m && posicion?.radio_pivote_m
+            ? (d.precision_m / posicion.radio_pivote_m) * radio
+            : null
+        return (
+          <g key={d.dispositivo}>
+            {rPrecision !== null && rPrecision > 2 && (
+              <circle cx={p.x} cy={p.y} r={rPrecision} fill={color} fillOpacity={0.12}
+                      stroke={color} strokeOpacity={0.35} strokeWidth={1} />
+            )}
+            {d.moviendose && (
+              <circle cx={p.x} cy={p.y} r={9} fill="none" stroke={color} strokeWidth={2}>
+                <animate attributeName="r" values="7;16;7" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.7;0;0.7" dur="2s" repeatCount="indefinite" />
+              </circle>
+            )}
+            <circle cx={p.x} cy={p.y} r={7} fill="white" />
+            <circle cx={p.x} cy={p.y} r={5} fill={color} />
+            {d.nombre && (
+              <text
+                x={p.x} y={p.y - 12}
+                textAnchor="middle"
+                style={{ fontSize: Math.max(8, size * 0.026), fontWeight: 600, fill: color,
+                         paintOrder: 'stroke', stroke: 'white', strokeWidth: 3 }}
+              >
+                {d.nombre}
+              </text>
+            )}
+            <title>
+              {d.nombre ?? d.dispositivo}
+              {d.lote ? ` · ${d.lote}` : ''}
+              {d.hace_seg !== undefined ? ` · hace ${d.hace_seg}s` : ''}
+            </title>
+          </g>
         )
       })}
 

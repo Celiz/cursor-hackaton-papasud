@@ -31,6 +31,9 @@ export async function POST(request: NextRequest) {
   let latitud: number | null = null
   let longitud: number | null = null
   let guardar = false
+  let dispositivo: string | null = null
+  let tomadaPor: string | null = null
+  let miniatura: string | null = null
 
   const tipo = request.headers.get('content-type') ?? ''
   if (tipo.includes('application/json')) {
@@ -40,6 +43,9 @@ export async function POST(request: NextRequest) {
     latitud = body.latitud ?? null
     longitud = body.longitud ?? null
     guardar = Boolean(body.guardar)
+    dispositivo = body.dispositivo ?? null
+    tomadaPor = body.tomada_por ?? null
+    miniatura = body.miniatura ?? null
   } else {
     const form = await request.formData()
     const file = form.get('foto') as File | null
@@ -126,10 +132,16 @@ export async function POST(request: NextRequest) {
       diagnostico.observacion,
     ].filter(Boolean).join(' · ')
 
+    // La imagen completa no se guarda en la base: pesa megas y no hay dónde
+    // servirla. Se guarda la miniatura, que es lo que la pantalla muestra.
     const { rows } = await query(
-      `INSERT INTO pap_ot_fotos (org_id, parcela_id, url, latitud, longitud, tomada_at, analisis_ia)
-       VALUES ($1, $2, $3, $4, $5, now(), $6) RETURNING id`,
-      [session.org_id, parcelaId, imagen.slice(0, 120) + '…', latitud, longitud, resumen]
+      `INSERT INTO pap_ot_fotos
+         (org_id, parcela_id, url, latitud, longitud, tomada_at, analisis_ia,
+          dispositivo, tomada_por, hallazgo, confianza, urgente, miniatura)
+       VALUES ($1,$2,$3,$4,$5, now(), $6, $7,$8,$9,$10,$11,$12) RETURNING id`,
+      [session.org_id, parcelaId, '', latitud, longitud, resumen,
+       dispositivo, tomadaPor, diagnostico.hallazgo, diagnostico.confianza,
+       diagnostico.urgente, miniatura]
     )
     fotoId = rows[0]?.id ?? null
   }
