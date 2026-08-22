@@ -31,6 +31,19 @@ interface Lote {
   cuadrante: number | null; anillo_desde: number | null; anillo_hasta: number | null
 }
 
+/** La foto completa pesa megas y no hay dónde servirla; esto es lo que se guarda y se muestra. */
+async function generarMiniatura(archivo: File, lado = 240): Promise<string> {
+  const bitmap = await createImageBitmap(archivo)
+  const escala = Math.min(1, lado / Math.max(bitmap.width, bitmap.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(bitmap.width * escala)
+  canvas.height = Math.round(bitmap.height * escala)
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('canvas no disponible')
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/jpeg', 0.6)
+}
+
 const COLOR_HALLAZGO: Record<string, string> = {
   tizon_tardio: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-300',
   virosis: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-300',
@@ -46,6 +59,7 @@ export default function FotoPageClient() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [imagen, setImagen] = useState<string | null>(null)
+  const [miniatura, setMiniatura] = useState<string | null>(null)
   const [analizando, setAnalizando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [diag, setDiag] = useState<Diagnostico | null>(null)
@@ -84,6 +98,7 @@ export default function FotoPageClient() {
       setDiag(null)
     }
     lector.readAsDataURL(archivo)
+    generarMiniatura(archivo).then(setMiniatura).catch(() => setMiniatura(null))
   }, [])
 
   const analizar = async () => {
@@ -120,6 +135,7 @@ export default function FotoPageClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imagen,
+          miniatura,
           parcela_id: loteElegido,
           latitud: gps.lectura?.latitud ?? null,
           longitud: gps.lectura?.longitud ?? null,
@@ -198,7 +214,7 @@ export default function FotoPageClient() {
                 size="icon"
                 variant="secondary"
                 className="absolute top-2 right-2"
-                onClick={() => { setImagen(null); setDiag(null) }}
+                onClick={() => { setImagen(null); setMiniatura(null); setDiag(null) }}
               >
                 <X className="h-4 w-4" />
               </Button>
