@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -85,20 +86,43 @@ export default function CopilotoPageClient() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-          <Sparkles className="h-5 w-5" />
-          Copiloto
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Preguntale al histórico en tus palabras. Cada respuesta se arma sobre la
-          consulta que corrió — podés verla.
-        </p>
+      <div className="flex items-center gap-3">
+        <Image
+          src="/tubi-saludo.png"
+          alt="Tubi"
+          width={56}
+          height={56}
+          className="shrink-0 drop-shadow-sm"
+          priority
+        />
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            Tubi
+            <Sparkles className="h-4 w-4 text-[var(--badge-blue-500)]" />
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Preguntale al histórico en tus palabras. Cada respuesta se arma sobre la
+            consulta que corrió — podés verla.
+          </p>
+        </div>
       </div>
 
       {turnos.length === 0 && (
         <Card>
           <CardContent className="p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Image
+                src="/tubi-saludo.png"
+                alt=""
+                width={72}
+                height={72}
+                className="shrink-0 -mt-1"
+              />
+              <p className="text-sm bg-[var(--badge-blue-100)] text-[var(--badge-blue-700)] rounded-2xl rounded-tl-sm px-3.5 py-2.5">
+                ¡Hola! Preguntame lo que quieras sobre las campañas, los lotes o el
+                stock. Busco la respuesta en los datos y te muestro de dónde salió.
+              </p>
+            </div>
             <p className="text-sm text-muted-foreground">Probá con alguna de estas:</p>
             <div className="flex flex-wrap gap-2">
               {SUGERENCIAS.map((s) => (
@@ -122,9 +146,11 @@ export default function CopilotoPageClient() {
             </div>
 
             {!t.respuesta && !t.error && cargando && i === turnos.length - 1 && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                <Image src="/tubi-saludo.png" alt="" width={30} height={30}
+                       className="shrink-0 animate-pulse" />
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Consultando el histórico…
+                Buscando en los datos…
               </div>
             )}
 
@@ -143,7 +169,16 @@ export default function CopilotoPageClient() {
             {t.respuesta && (
               <Card>
                 <CardContent className="p-4 space-y-3">
-                  <p className="text-sm leading-relaxed">{t.respuesta}</p>
+                  <div className="flex items-start gap-2.5">
+                    <Image
+                      src="/tubi-saludo.png"
+                      alt=""
+                      width={34}
+                      height={34}
+                      className="shrink-0 -mt-0.5"
+                    />
+                    <p className="text-sm leading-relaxed flex-1">{t.respuesta}</p>
+                  </div>
 
                   {t.sql && (
                     <details className="group">

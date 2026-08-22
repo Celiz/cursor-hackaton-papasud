@@ -26,35 +26,18 @@ function getOrgAccent(name: string): string {
   return ORG_COLORS[keys[index]]
 }
 
-function OrgLogo({ org, size = "md" }: { org: { nombre: string; logo_url?: string }; size?: "sm" | "md" | "lg" }) {
+function OrgLogo({ size = "md" }: { org?: unknown; size?: "sm" | "md" | "lg" }) {
   const sizes = {
-    sm: "w-7 h-7 text-xs rounded-md",
-    md: "w-10 h-10 text-sm rounded-lg",
-    lg: "w-14 h-14 text-xl rounded-xl",
+    sm: "w-7 h-7",
+    md: "w-10 h-10",
+    lg: "w-14 h-14",
   }
-  if (org.logo_url) {
-    return (
-      <div className={cn("relative overflow-hidden bg-transparent", sizes[size])}>
-        <Image
-          src={org.logo_url}
-          alt={org.nombre}
-          fill
-          className="object-contain"
-        />
-      </div>
-    )
-  }
-
-  const accent = getOrgAccent(org.nombre)
+  // La marca es Tubi, la papa exploradora. El logotipo completo
+  // ("PAPASUD S.A." en su placa azul) es apaisado y no entra en un cuadrado
+  // de 40 px: ese va en el encabezado, no acá.
   return (
-    <div
-      className={cn("flex items-center justify-center text-white font-medium", sizes[size])}
-      style={{
-        background: accent,
-        boxShadow: `0 2px 8px ${accent}30`,
-      }}
-    >
-      {org.nombre.charAt(0).toUpperCase()}
+    <div className={cn("relative overflow-hidden bg-transparent", sizes[size])}>
+      <Image src="/tubi-saludo.png" alt="Papasud" fill className="object-contain" priority />
     </div>
   )
 }

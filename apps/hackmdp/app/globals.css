@@ -696,3 +696,135 @@ textarea,
   -moz-user-select: text;
   user-select: text;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Papasud — paleta de marca
+
+   Sale de la mascota (Tubi, la papa exploradora) y del logo, tal como está
+   documentado en public/paleta-colores.md. La lógica: tierra como base neutra,
+   verde para lo que es crecimiento y salud del cultivo, y el azul del logo
+   reservado a lo digital — el copiloto, los datos, la IA — para que no se
+   confunda con los estados de campo.
+
+   Se define dos veces a propósito: los tokens crudos (--sprout-700 y demás)
+   para usarlos directo, y el remapeo de los tokens de shadcn para que TODOS
+   los componentes que ya existen tomen la paleta sin tocarlos uno por uno.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Papa — base neutra y tierra */
+  --potato-900: #5C3D22;
+  --potato-700: #8B5E34;
+  --potato-500: #C89B6A;
+  --potato-300: #E4C49A;
+  --potato-100: #F5E3C8;
+  --potato-050: #FBF1E2;
+
+  /* Chaleco y brotes — crecimiento y estado del cultivo */
+  --sprout-900: #3D5A2A;
+  --sprout-700: #5A7A3A;
+  --sprout-500: #7FA24C;
+  --sprout-300: #A8C97A;
+  --sprout-100: #DCEBC2;
+
+  /* Sombrero de explorador — jerarquía y navegación */
+  --explorer-800: #4A3B2A;
+  --explorer-600: #6B5640;
+  --explorer-400: #8F7A5E;
+
+  /* Placa del chaleco — todo lo digital */
+  --badge-blue-700: #1F3A6E;
+  --badge-blue-500: #2C4E8C;
+  --badge-blue-100: #DCE4F2;
+  /* El azul del logotipo es más saturado que el de la paleta: se reserva para
+     la marca en sí, no para la interfaz. */
+  --marca-azul: #2d3192;
+
+  /* Neutros con temperatura cálida, no grises puros */
+  --ink-900: #2A2420;
+  --ink-700: #544A42;
+  --ink-400: #8C8078;
+  --ink-200: #D8D0C6;
+  --ink-050: #FAF7F2;
+
+  --pap-success: #5A8A3C;
+  --pap-warning: #C98A2E;
+  --pap-danger:  #B14A3A;
+  --pap-info:    #2C4E8C;
+
+  /* Radios: cápsula para lo interactivo, radios chicos para el resto */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* ── Remapeo de los tokens de shadcn ────────────────────────────────── */
+  --background: 38 44% 96%;      /* ink-050  */
+  --foreground: 24 14% 15%;      /* ink-900  */
+  --card: 0 0% 100%;
+  --card-foreground: 24 14% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 24 14% 15%;
+
+  --primary: 90 36% 35%;         /* sprout-700, la acción de campo */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 36 69% 87%;       /* potato-100 */
+  --secondary-foreground: 28 46% 25%;
+  --muted: 36 76% 94%;           /* potato-050 */
+  --muted-foreground: 27 12% 29%;
+  --accent: 219 56% 28%;         /* badge-blue-700, lo digital */
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 8 51% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 33 19% 81%;          /* ink-200 */
+  --input: 33 19% 81%;
+  --ring: 90 36% 35%;
+  --radius: 0.875rem;            /* radius-md */
+
+  /* Gráficos: verde primero, que es lo que se mide en el campo */
+  --chart-1: 84 36% 47%;
+  --chart-2: 31 46% 60%;
+  --chart-3: 219 52% 36%;
+  --chart-4: 36 63% 48%;
+  --chart-5: 32 28% 23%;
+
+  --sidebar-background: 32 28% 23%;   /* explorer-800 */
+  --sidebar-foreground: 36 37% 92%;
+  --sidebar-primary: 84 36% 47%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 31 25% 34%;
+  --sidebar-accent-foreground: 36 37% 92%;
+  --sidebar-border: 31 25% 34%;
+  --sidebar-ring: 84 36% 47%;
+}
+
+.dark {
+  --background: 30 15% 10%;
+  --foreground: 36 37% 92%;
+  --card: 27 15% 14%;
+  --card-foreground: 36 37% 92%;
+  --popover: 27 15% 14%;
+  --popover-foreground: 36 37% 92%;
+
+  /* Los acentos suben un paso de luminosidad para mantener contraste AA */
+  --primary: 84 36% 47%;         /* sprout-500 */
+  --primary-foreground: 24 14% 15%;
+  --secondary: 32 28% 23%;
+  --secondary-foreground: 36 37% 92%;
+  --muted: 27 15% 14%;
+  --muted-foreground: 34 21% 46%;
+  --accent: 219 52% 36%;         /* badge-blue-500 */
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 8 51% 52%;
+  --border: 31 25% 34%;
+  --input: 31 25% 34%;
+  --ring: 84 36% 47%;
+
+  --sidebar-background: 27 15% 14%;
+  --sidebar-foreground: 36 37% 92%;
+  --sidebar-accent: 32 28% 23%;
+  --sidebar-border: 32 28% 23%;
+}
