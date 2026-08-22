@@ -123,8 +123,28 @@ export default function AgroDashboard() {
           <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
             <Cifra titulo="Campaña" valor={c?.nombre ?? '—'} detalle={c ? `${c.anio}` : undefined} />
             <Cifra titulo="Superficie" valor={c ? Math.round(c.superficie_ha) : '—'} unidad="ha" icono={Ruler} />
-            <Cifra titulo="Producción" valor={c ? Math.round(c.produccion_tn).toLocaleString('es-AR') : '—'} unidad="t" icono={Scale} />
-            <Cifra titulo="Rinde medio" valor={c?.rinde ?? '—'} unidad="t/ha" icono={Sprout} />
+            <Cifra
+              titulo={c?.produccion_real_tn ? 'Ingresado' : 'Producción'}
+              valor={
+                c?.produccion_real_tn
+                  ? Math.round(c.produccion_real_tn).toLocaleString('es-AR')
+                  : c ? Math.round(c.produccion_tn).toLocaleString('es-AR') : '—'
+              }
+              unidad="t"
+              detalle={
+                c?.produccion_real_tn
+                  ? `de ${Math.round(c.produccion_tn).toLocaleString('es-AR')} t estimadas`
+                  : undefined
+              }
+              icono={Scale}
+            />
+            <Cifra
+              titulo="Rinde estimado"
+              valor={c?.rinde ?? '—'}
+              unidad="t/ha"
+              detalle={c?.estimado === false ? 'campaña en curso' : undefined}
+              icono={Sprout}
+            />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">

@@ -13,7 +13,8 @@ export async function GET() {
   const [campana, historia, lotes, ordenes, stock, conteo, variedades] = await Promise.all([
     // Campaña en curso
     query(
-      `SELECT anio, nombre, superficie_ha, produccion_tn, lluvia_mm, dias_heladas,
+      `SELECT anio, nombre, superficie_ha, produccion_tn, produccion_real_tn,
+              estimado, notas, lluvia_mm, dias_heladas,
               round((produccion_tn / NULLIF(superficie_ha, 0))::numeric, 1) AS rinde
          FROM pap_campanas WHERE org_id = $1 ORDER BY anio DESC LIMIT 1`,
       [org]
