@@ -1915,8 +1915,9 @@ const AGRO_SECTION_COPILOTO: Section = {
 const AGRO_SECTION_CAMPO: Section = {
   title: "Campo",
   icon: Sprout,
-  url: `/dashboard/campo/mapa`,
+  url: `/dashboard/campo/pivotes`,
   items: [
+    { title: "Pivotes", url: `/dashboard/campo/pivotes`, icon: Target },
     { title: "Mapa de lotes", url: `/dashboard/campo/mapa`, icon: MapPin },
     { title: "Lotes", url: `/dashboard/campo/lotes`, icon: Leaf },
     { title: "Órdenes de trabajo", url: `/dashboard/campo/ordenes`, icon: ClipboardList },
