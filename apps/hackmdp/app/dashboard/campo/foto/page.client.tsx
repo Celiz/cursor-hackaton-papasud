@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { useGps } from '@/lib/hooks/use-gps'
 import { ubicarEnCampo, type Pivote } from '@/lib/campo/pivote'
 import { UMBRAL_CONFIANZA, type Diagnostico } from '@/lib/campo/vision'
+import { referenciaDe } from '@/lib/campo/referencia'
 import {
   Camera, Upload, Loader2, AlertTriangle, MapPin, Save, X, Eye, Satellite,
 } from 'lucide-react'
@@ -300,6 +301,40 @@ export default function FotoPageClient() {
                 ))}
               </div>
             )}
+
+            {/* Lo que el sistema sabe de ese cuadro. Es una consulta real a la
+                referencia local por la clase que devolvió el modelo. */}
+            {(() => {
+              const ref = referenciaDe(diag.hallazgo)
+              if (!ref) return null
+              return (
+                <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Ficha de {diag.etiqueta.toLowerCase()}
+                  </p>
+                  <ul className="text-sm space-y-0.5 list-disc list-inside marker:text-muted-foreground">
+                    {ref.signos.map((sg, i) => <li key={i}>{sg}</li>)}
+                  </ul>
+                  {ref.diferencial && (
+                    <p className="text-xs">
+                      <span className="text-muted-foreground">Se confunde con: </span>
+                      {ref.diferencial}
+                    </p>
+                  )}
+                  {ref.manejo && (
+                    <p className="text-xs">
+                      <span className="text-muted-foreground">Manejo: </span>{ref.manejo}
+                    </p>
+                  )}
+                  {ref.ventana_dias && (
+                    <p className="text-xs text-muted-foreground">
+                      Ventana de referencia entre aplicaciones preventivas:{' '}
+                      {ref.ventana_dias} días.
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
 
             <p className="text-[11px] text-muted-foreground border-t pt-2">
               Esto es una observación, no un diagnóstico de laboratorio. No indica dosis
