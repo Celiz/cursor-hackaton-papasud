@@ -12,6 +12,37 @@
 
 import type { Hallazgo } from './vision'
 
+/**
+ * Imágenes de referencia por clase, tomadas del dataset PlantVillage
+ * (spMohanty/PlantVillage-Dataset, subconjunto de papa).
+ *
+ * Se usan como REFERENCIA VISUAL, no como entrenamiento: son hojas
+ * fotografiadas en laboratorio, y un clasificador entrenado sobre ellas se cae
+ * con fotos de campo. Pero para que el agrónomo compare contra lo que tiene
+ * delante sirven perfecto: son los cuadros de manual.
+ */
+export const IMAGENES_REFERENCIA: Partial<Record<Hallazgo, string[]>> = {
+  tizon_tardio: [
+    '/referencia/tizon_tardio-1.jpg',
+    '/referencia/tizon_tardio-2.jpg',
+    '/referencia/tizon_tardio-3.jpg',
+  ],
+  tizon_temprano: [
+    '/referencia/tizon_temprano-1.jpg',
+    '/referencia/tizon_temprano-2.jpg',
+    '/referencia/tizon_temprano-3.jpg',
+  ],
+  sana: [
+    '/referencia/sana-1.jpg',
+    '/referencia/sana-2.jpg',
+    '/referencia/sana-3.jpg',
+  ],
+}
+
+export function imagenesDe(h: Hallazgo): string[] {
+  return IMAGENES_REFERENCIA[h] ?? []
+}
+
 export interface Referencia {
   signos: string[]
   /** Con qué se confunde y cómo diferenciarlo. */

@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { useGps } from '@/lib/hooks/use-gps'
 import { ubicarEnCampo, type Pivote } from '@/lib/campo/pivote'
 import { UMBRAL_CONFIANZA, type Diagnostico } from '@/lib/campo/vision'
-import { referenciaDe } from '@/lib/campo/referencia'
+import { referenciaDe, imagenesDe } from '@/lib/campo/referencia'
 import {
   Camera, Upload, Loader2, AlertTriangle, MapPin, Save, X, Eye, Satellite,
 } from 'lucide-react'
@@ -331,6 +331,24 @@ export default function FotoPageClient() {
                   <ul className="text-sm space-y-0.5 list-disc list-inside marker:text-muted-foreground">
                     {ref.signos.map((sg, i) => <li key={i}>{sg}</li>)}
                   </ul>
+
+                  {imagenesDe(diag.hallazgo).length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-muted-foreground">
+                        Imágenes de referencia del cuadro — compará con tu foto:
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {imagenesDe(diag.hallazgo).map((src) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={src} src={src} alt="Referencia"
+                               className="w-full aspect-square object-cover rounded border" />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Fuente: PlantVillage (hojas fotografiadas en laboratorio).
+                      </p>
+                    </div>
+                  )}
                   {ref.diferencial && (
                     <p className="text-xs">
                       <span className="text-muted-foreground">Se confunde con: </span>
