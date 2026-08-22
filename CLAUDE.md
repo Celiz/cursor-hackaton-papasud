@@ -7,15 +7,44 @@ Tiene las dos mitades que necesita una productora: el **ERP clásico** (contacto
 stock multi-ubicación, insumos y precios) y lo **propio del campo** (lotes,
 órdenes de trabajo, campañas, copiloto sobre el histórico).
 
-## Arrancar
+## Arrancar desde cero
 
 ```bash
+pnpm install                          # en la raíz del monorepo
 cd apps/hackmdp
-cp .env.example .env.local     # completar DATABASE_URL y la clave del modelo
+cp .env.example .env.local            # completar DATABASE_URL y la clave del modelo
 npx next dev --port 3200
 ```
 
 Con `DEMO_AUTOLOGIN=true` se entra derecho al panel, sin pantalla de login.
+
+### Cargar la base
+
+Contra una base vacía, en este orden:
+
+```bash
+psql "$DATABASE_URL" -f packages/db/migrations/000_baseline.sql   # esquema del ERP
+for f in packages/db/migrations/1[23]*_papasud*.sql; do
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+done
+```
+
+| Migración | Qué hace |
+|---|---|
+| `1200_papasud.sql` | Tablas `pap_*` y la vista del copiloto |
+| `1201_papasud_seed.sql` | Organización, usuario y catálogos base |
+| `1203_papasud_stock_ot.sql` | Depósitos, productos y lotes de stock |
+| `1204_papasud_vocabulario_real.sql` | Pivote/tercio, marcas comerciales, categorías reales |
+| `1300_papasud_datos_reales.sql` | **Los datos de verdad**: 436 movimientos, 39 variedades, 24 lotes del plano, 3 órdenes, 66 agroquímicos |
+
+Todas son idempotentes: correrlas de nuevo no duplica nada.
+
+### Trampa con Supabase
+
+El host `db.<proyecto>.supabase.co` resuelve **solo a IPv6**. Desde una máquina
+sin salida IPv6 la conexión da timeout y parece contraseña equivocada. No lo es:
+hay que habilitar *Connection pooling* en el panel y usar la cadena del pooler,
+que va por IPv4 en el puerto 6543 y con el usuario `postgres.<proyecto>`.
 
 ## Qué incluye
 
@@ -76,10 +105,22 @@ Las migraciones de Papasud son `packages/db/migrations/12*_papasud*.sql`:
 Son **idempotentes y deterministas** (`setseed`). El resto de las migraciones
 (`000`–`11xx`) son el esquema base del ERP.
 
-Los datos de Papasud que trae el seed son **sintéticos**, verosímiles pero
-inventados, con historia deliberada para que el copiloto tenga algo que encontrar:
-2009 y 2018 secos, 2012 con exceso hídrico, 2023 la mejor campaña, e Innovator
-rindiendo mejor en El Ceibo.
+### De dónde salen los datos
+
+**Son reales**, extraídos de los archivos de Papasud (`1300_papasud_datos_reales.sql`):
+
+- `Plano_Santa_Ana_2023.pdf` → los 24 lotes del campo Marisol. Cada lote es un
+  **sector del círculo de riego**, ubicado por pivote (A/B), cuadrante y tercio
+  del radio. No es un punto en un mapa.
+- `Orden_de_trabajo.xlsx` → 3 órdenes de aplicación con sus renglones, aplicador,
+  hora y herramienta (aplican con **drone**), más el catálogo de 66 agroquímicos
+  del presupuesto de campaña con su precio en dólares.
+- `Planilla_de_movimientos_2026.xls` → **436 movimientos de stock** en seis
+  circuitos, con remito, DTV de SENASA, bolsas, kilos, transportista y destino.
+  Y las 39 variedades que realmente siembran.
+
+Lo único sintético que queda es el histórico de rendimientos por campaña
+(`1202`), porque los archivos solo cubren 2026.
 
 ## Trampas del dominio
 
