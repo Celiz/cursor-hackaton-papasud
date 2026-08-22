@@ -29,14 +29,13 @@ function getOrgAccent(name: string): string {
 function OrgLogo({ size = "md" }: { org?: unknown; size?: "sm" | "md" | "lg" }) {
   // Dimensiones explícitas y no `fill`: con `fill` Next exige `sizes` y sin eso
   // tira error en el sidebar.
-  const px = { sm: 28, md: 40, lg: 56 }[size]
-  // La marca es Tubi, la papa exploradora. El logotipo completo
-  // ("PAPASUD S.A." en su placa azul) es apaisado y no entra en un cuadrado
-  // de 40 px: ese va en el encabezado, no acá.
+  const px = { sm: 28, md: 44, lg: 60 }[size]
+  // Acá va la MARCA, no la mascota: el logotipo de Papasud S.A. Tubi aparece
+  // en el copiloto y como ícono de la app, que es donde tiene sentido.
   return (
     <Image
-      src="/tubi-saludo.png"
-      alt="Papasud"
+      src="/papasud-icono.png"
+      alt="Papasud S.A."
       width={px}
       height={px}
       className="object-contain shrink-0"
