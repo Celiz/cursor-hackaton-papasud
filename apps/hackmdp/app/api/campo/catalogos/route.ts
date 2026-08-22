@@ -12,6 +12,7 @@ export async function GET() {
   const [parcelas, tareas, insumos] = await Promise.all([
     query(
       `SELECT p.id, p.codigo, p.nombre, p.superficie_ha, p.estado, p.tiene_riego,
+              p.pivote, p.tercio, p.cuadrante,
               p.latitud, p.longitud, e.nombre AS establecimiento
          FROM pap_parcelas p
          LEFT JOIN pap_establecimientos e ON e.id = p.establecimiento_id

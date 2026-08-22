@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   normalizarExtraccion,
   numeroDeLote,
+  letraDePivote,
   resolverFecha,
   extraerJson,
   type Catalogos,
@@ -12,9 +13,9 @@ const HOY = "2026-08-22";
 
 const catalogos: Catalogos = {
   parcelas: [
-    { id: "p8", codigo: "Lote 8", nombre: "El Ceibo — cuadro 8", superficie_ha: 13.6 },
-    { id: "p13", codigo: "Lote 13", nombre: "Don Aníbal — cuadro 13", superficie_ha: 9.9 },
-    { id: "p3", codigo: "Lote 3", nombre: "La Josefina — cuadro 3", superficie_ha: "12.20" },
+    { id: "p8", codigo: "Lote 8", nombre: "El Ceibo — cuadro 8", superficie_ha: 13.6, pivote: "B", tercio: 2 },
+    { id: "p13", codigo: "Lote 13", nombre: "Don Aníbal — cuadro 13", superficie_ha: 9.9, pivote: "A", tercio: 1 },
+    { id: "p3", codigo: "Lote 3", nombre: "La Josefina — cuadro 3", superficie_ha: "12.20", pivote: "A", tercio: 3 },
   ],
   tareas: [
     { id: "t1", codigo: "fungicida", nombre: "Aplicación de fungicida", alias: ["fungicida", "tizón", "curar", "pulverizar"], requiere_insumos: true },
@@ -182,4 +183,47 @@ test("el dictado real del lote 8 sale entero y sin avisos", () => {
   assert.equal(r.horas, 3.5);
   assert.equal(r.insumos[0].cantidad, 27.2);
   assert.deepEqual(r.avisos, []);
+});
+
+// ── Ubicación por pivote y tercio, que es como la escribe la orden en papel ──
+
+test("resuelve la ubicación por pivote y tercio", () => {
+  const r = normalizarExtraccion({ pivote: "B", tercio: 2, tarea: "aplicar" }, catalogos, HOY);
+  assert.equal(r.parcela_id, "p8");
+  assert.equal(r.pivote, "B");
+  assert.equal(r.tercio, 2);
+  assert.equal(r.superficie_ha, 13.6);
+});
+
+test("acepta el pivote dicho con ruido alrededor", () => {
+  const r = normalizarExtraccion({ pivote: "pivote a", tercio: "3", tarea: "aporcar" }, catalogos, HOY);
+  assert.equal(r.parcela_codigo, "Lote 3");
+});
+
+test("el lote gana si se dicen los dos y no coinciden", () => {
+  // El pivote apunta a p8, pero el lote es explícito: manda lo más específico
+  // que resolvió primero, y el operador lo ve en pantalla antes de guardar.
+  const r = normalizarExtraccion({ pivote: "B", tercio: 2, lote: "13" }, catalogos, HOY);
+  assert.equal(r.parcela_id, "p8");
+});
+
+test("un pivote sin lote asignado avisa en vez de inventar", () => {
+  const r = normalizarExtraccion({ pivote: "C", tercio: 1, tarea: "aplicar" }, catalogos, HOY);
+  assert.equal(r.parcela_id, null);
+  assert.ok(r.avisos.some((a) => a.includes("pivote C")));
+});
+
+test("sin lote ni pivote, lo dice claro", () => {
+  const r = normalizarExtraccion({ tarea: "aporcar" }, catalogos, HOY);
+  assert.ok(r.avisos.some((a) => a.includes("ni el pivote")));
+});
+
+test("saca la letra del pivote de cualquier forma en que se diga", () => {
+  assert.equal(letraDePivote("B"), "B");
+  assert.equal(letraDePivote("pivote B"), "B");
+  assert.equal(letraDePivote("el pivote b"), "B");
+  assert.equal(letraDePivote("Pivote  C "), "C");
+  assert.equal(letraDePivote(null), null);
+  // Ante algo ambiguo no adivina.
+  assert.equal(letraDePivote("el de arriba"), null);
 });

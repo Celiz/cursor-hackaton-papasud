@@ -37,6 +37,8 @@ interface InsumoExtraido {
 interface OrdenExtraida {
   parcela_id: string | null
   parcela_codigo: string | null
+  pivote: string | null
+  tercio: number | null
   superficie_ha: number | null
   tarea: string | null
   tarea_tipo_id: string | null
@@ -63,13 +65,16 @@ interface Orden {
   estado: string
   origen: string
   origen_texto: string | null
+  pivote: string | null
+  tercio: number | null
+  herramienta: string | null
   insumos: Array<{ insumo_nombre: string; cantidad: string | null; unidad: string | null; fuera_de_rango: boolean }>
 }
 
 const EJEMPLOS = [
-  'Hoy estuvimos en el lote 8, pasamos con la pulverizadora, tiramos mancozeb dos kilos por hectárea preventivo por el tizón, tardamos tres horas y media.',
-  'En el tres terminamos de aporcar, salió bien, seis horas con la Grimme.',
-  'Recorrí el 13, hay pulgón en la cabecera norte, todavía poco pero conviene mirarlo la semana que viene.',
+  'Ayer tiramos Dithane dos y medio kilos por hectárea en el pivote B tercio 2, lo hicimos con el drone, aplicó Daniel.',
+  'En el pivote A tercio 1 pasamos Daconil uno con tres y Magic cero seis con la pulverizadora, arrancamos seis de la mañana.',
+  'Recorrí el pivote B tercio 3, hay pulgón en la cabecera norte, todavía poco pero conviene mirarlo la semana que viene.',
 ]
 
 export default function OrdenesPageClient() {
@@ -131,6 +136,7 @@ export default function OrdenesPageClient() {
         body: JSON.stringify({
           ...orden,
           estado: 'completada',
+          herramienta: orden.maquinaria,
           origen: 'voz',
           origen_texto: texto,
           extraccion: { avisos: orden.avisos },
@@ -292,6 +298,18 @@ export default function OrdenesPageClient() {
               </div>
 
               <div className="space-y-1.5">
+                <Label className="text-xs">Ubicación</Label>
+                <div className="h-9 flex items-center px-3 rounded-md border text-sm text-muted-foreground">
+                  {orden.pivote
+                    ? `Pivote ${orden.pivote}${orden.tercio ? ` · tercio ${orden.tercio}` : ''}`
+                    : '—'}
+                  {orden.superficie_ha && (
+                    <span className="ml-auto tabular-nums">{orden.superficie_ha} ha</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
                 <Label className="text-xs">Tarea</Label>
                 <Select
                   value={orden.tarea_tipo_id ?? ''}
@@ -413,9 +431,17 @@ export default function OrdenesPageClient() {
                   {new Date(o.fecha).toLocaleDateString('es-AR')}
                 </span>
                 <Badge variant="outline" className="shrink-0">{o.parcela_codigo ?? 'sin lote'}</Badge>
+                {o.pivote && (
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    piv. {o.pivote}{o.tercio ? `/${o.tercio}` : ''}
+                  </span>
+                )}
                 <span className="text-sm font-medium flex-1 min-w-40">{o.tarea}</span>
                 {o.responsable_nombre && (
                   <span className="text-xs text-muted-foreground">{o.responsable_nombre}</span>
+                )}
+                {o.herramienta && (
+                  <span className="text-xs text-muted-foreground shrink-0">{o.herramienta}</span>
                 )}
                 {o.horas && (
                   <span className="text-xs text-muted-foreground tabular-nums">{Number(o.horas)} h</span>

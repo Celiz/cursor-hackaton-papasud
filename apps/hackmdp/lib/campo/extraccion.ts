@@ -13,6 +13,9 @@ export interface CatalogoParcela {
   codigo: string;
   nombre?: string | null;
   superficie_ha?: number | string | null;
+  /** Ubicación real de campo: el pivote de riego y el tercio del radio. */
+  pivote?: string | null;
+  tercio?: number | string | null;
 }
 
 export interface CatalogoTarea {
@@ -41,6 +44,8 @@ export interface Catalogos {
 /** Lo que devuelve el modelo, sin validar. Todo es opcional a propósito. */
 export interface ExtraccionCruda {
   lote?: string | null;
+  pivote?: string | null;
+  tercio?: number | string | null;
   tarea?: string | null;
   fecha?: string | null;
   responsable?: string | null;
@@ -66,6 +71,8 @@ export interface InsumoResuelto {
 export interface OrdenExtraida {
   parcela_id: string | null;
   parcela_codigo: string | null;
+  pivote: string | null;
+  tercio: number | null;
   superficie_ha: number | null;
   tarea: string | null;
   tarea_tipo_id: string | null;
@@ -114,6 +121,19 @@ export function numeroDeLote(texto: string | null | undefined): number | null {
     if (new RegExp(`\\b${palabra}\\b`).test(t)) return valor;
   }
   return null;
+}
+
+/**
+ * Saca la letra del pivote de como se dice: "B", "pivote B", "el pivote b".
+ * Devuelve null si no queda una sola letra, para no adivinar.
+ */
+export function letraDePivote(texto: string | null | undefined): string | null {
+  if (!texto) return null;
+  const limpio = normalizar(texto)
+    .replace(/\bpivotes?\b/g, " ")
+    .replace(/\bel\b|\bla\b|\bdel\b/g, " ")
+    .replace(/[^a-z]/g, "");
+  return limpio.length === 1 ? limpio.toUpperCase() : null;
 }
 
 function aNumero(v: unknown): number | null {
@@ -191,10 +211,26 @@ export function normalizarExtraccion(
 ): OrdenExtraida {
   const avisos: string[] = [];
 
-  // ── Lote ────────────────────────────────────────────────────────────────
+  // ── Ubicación ───────────────────────────────────────────────────────────
+  // En el campo la ubicación se dice de dos maneras: por número de lote
+  // ("el 8", "lote 811") o por posición en el pivote ("pivote B, tercio 2").
+  // Se acepta cualquiera de las dos; la segunda es la que usa la orden en papel.
   let parcela: CatalogoParcela | null = null;
+
+  const pivoteDicho = letraDePivote(cruda.pivote);
+  const tercioDicho = aNumero(cruda.tercio);
+
+  if (pivoteDicho && tercioDicho !== null) {
+    parcela =
+      catalogos.parcelas.find(
+        (p) =>
+          (p.pivote ?? '').toUpperCase() === pivoteDicho &&
+          aNumero(p.tercio) === tercioDicho
+      ) ?? null;
+  }
+
   const nro = numeroDeLote(cruda.lote);
-  if (nro !== null) {
+  if (!parcela && nro !== null) {
     parcela =
       catalogos.parcelas.find((p) => numeroDeLote(p.codigo) === nro) ?? null;
   }
@@ -206,11 +242,15 @@ export function normalizarExtraccion(
       ) ?? null;
   }
   if (!parcela) {
-    avisos.push(
-      cruda.lote
-        ? `No se pudo identificar el lote "${cruda.lote}". Elegilo a mano.`
-        : "No se mencionó ningún lote."
-    );
+    if (pivoteDicho && tercioDicho !== null) {
+      avisos.push(
+        `No hay un lote en el pivote ${pivoteDicho}, tercio ${tercioDicho}. Elegilo a mano.`
+      );
+    } else if (cruda.lote) {
+      avisos.push(`No se pudo identificar el lote "${cruda.lote}". Elegilo a mano.`);
+    } else {
+      avisos.push("No se mencionó el lote ni el pivote.");
+    }
   }
 
   const superficie = parcela ? aNumero(parcela.superficie_ha) : null;
@@ -275,6 +315,8 @@ export function normalizarExtraccion(
   return {
     parcela_id: parcela?.id ?? null,
     parcela_codigo: parcela?.codigo ?? null,
+    pivote: parcela?.pivote ?? pivoteDicho,
+    tercio: parcela ? aNumero(parcela.tercio) : tercioDicho,
     superficie_ha: superficie,
     tarea: tarea?.nombre ?? (cruda.tarea ? cruda.tarea.trim() : null),
     tarea_tipo_id: tarea?.id ?? null,
@@ -297,7 +339,9 @@ export function normalizarExtraccion(
  * de inventar, y lo que igual invente lo caza `normalizarExtraccion`.
  */
 export function construirPrompt(texto: string, catalogos: Catalogos, hoy: string): string {
-  const lotes = catalogos.parcelas.map((p) => p.codigo).join(", ");
+  const lotes = catalogos.parcelas
+    .map((p) => `${p.codigo} (pivote ${p.pivote ?? '?'}, tercio ${p.tercio ?? '?'})`)
+    .join("; ");
   const tareas = catalogos.tareas
     .map((t) => `${t.nombre} (${(t.alias ?? []).join(", ")})`)
     .join("; ");
@@ -321,9 +365,12 @@ Reglas:
 - No completes datos que no se dijeron. Lo que falta va en null.
 - Las dosis van por hectárea, tal como se dictaron. No las conviertas.
 - "el 8", "el ocho" y "lote 8" son el mismo lote.
+- La ubicación se puede decir por lote O por posición en el pivote de riego:
+  "pivote B tercio 2" → {"pivote":"B","tercio":2}. Si se dicen las dos, devolvé las dos.
+- Las aplicaciones de fungicida, insecticida y herbicida son todas la tarea "Aplicación".
 
 Respondé SOLO con este JSON, sin texto alrededor y sin bloque de código:
-{"lote":string|null,"tarea":string|null,"fecha":string|null,"responsable":string|null,"maquinaria":string|null,"horas":number|null,"descripcion":string|null,"insumos":[{"nombre":string,"dosis_ha":number|null,"unidad":string|null}]}
+{"lote":string|null,"pivote":string|null,"tercio":number|null,"tarea":string|null,"fecha":string|null,"responsable":string|null,"maquinaria":string|null,"horas":number|null,"descripcion":string|null,"insumos":[{"nombre":string,"dosis_ha":number|null,"unidad":string|null}]}
 
 Relato del ingeniero:
 """${texto}"""`;

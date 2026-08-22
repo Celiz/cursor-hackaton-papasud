@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     parcela_id, tarea, tarea_tipo_id, descripcion, fecha,
     responsable_nombre, maquinaria, horas, superficie_ha,
     estado, origen, origen_texto, extraccion, insumos,
+    pivote, tercio, herramienta, hora,
   } = body
 
   if (!tarea) {
@@ -69,9 +70,10 @@ export async function POST(request: NextRequest) {
     `INSERT INTO pap_ordenes_trabajo
        (org_id, parcela_id, campana_id, tarea, tarea_tipo_id, descripcion, fecha,
         responsable_nombre, maquinaria, horas, superficie_ha, estado, origen,
-        origen_texto, extraccion)
+        origen_texto, extraccion, pivote, tercio, herramienta, hora)
      VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7::date, CURRENT_DATE),$8,$9,$10,$11,
-             COALESCE($12,'registrada'), COALESCE($13,'manual'), $14, $15)
+             COALESCE($12,'registrada'), COALESCE($13,'manual'), $14, $15,
+             $16, $17, $18, $19::time)
      RETURNING *`,
     [
       session.org_id, parcela_id ?? null, campana.rows[0]?.id ?? null, tarea,
@@ -79,6 +81,7 @@ export async function POST(request: NextRequest) {
       responsable_nombre ?? null, maquinaria ?? null, horas ?? null,
       superficie_ha ?? null, estado ?? null, origen ?? null,
       origen_texto ?? null, extraccion ? JSON.stringify(extraccion) : null,
+      pivote ?? null, tercio ?? null, herramienta ?? null, hora ?? null,
     ]
   )
 

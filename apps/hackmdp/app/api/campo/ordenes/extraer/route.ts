@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const [parcelas, tareas, insumos] = await Promise.all([
     query(
-      `SELECT id, codigo, nombre, superficie_ha FROM pap_parcelas
+      `SELECT id, codigo, nombre, superficie_ha, pivote, tercio FROM pap_parcelas
         WHERE org_id = $1 AND activo`,
       [session.org_id]
     ),
