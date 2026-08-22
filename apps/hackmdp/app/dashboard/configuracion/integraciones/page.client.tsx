@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import useSWR, { mutate } from 'swr';
 import GoogleIntegrationCard from '@/components/core-ui/GoogleIntegrationCard';
 import MercadoPagoIntegrationCard from '@/components/core-ui/MercadoPagoIntegrationCard';
-import TelegramIntegrationCard from '@/components/core-ui/TelegramIntegrationCard';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -58,15 +57,6 @@ export default function IntegracionesPageClient() {
     fetcher,
     { dedupingInterval: 60000 }
   );
-
-  // Fetch Telegram bot status
-  const { data: telegramData, mutate: mutateTelegram } = useSWR<{
-    configured: boolean
-    bot: any
-    users: any[]
-  }>('/api/telegram/status', (url: string) => fetch(url).then(r => r.json()), {
-    dedupingInterval: 60000,
-  });
 
   // Handle OAuth callback success/error
   useEffect(() => {
@@ -184,7 +174,7 @@ export default function IntegracionesPageClient() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Integraciones</h1>
             <p className="text-sm text-muted-foreground">
-              Google, Email, Telegram, WhatsApp, MercadoPago, AFIP
+              Google, Email, MercadoPago, ARCA
             </p>
           </div>
         </div>
@@ -218,7 +208,7 @@ export default function IntegracionesPageClient() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Integraciones</h1>
           <p className="text-sm text-muted-foreground">
-            Google, Email, Telegram, WhatsApp, MercadoPago, AFIP
+            Google, Email, MercadoPago, ARCA
           </p>
         </div>
       </div>
@@ -238,32 +228,6 @@ export default function IntegracionesPageClient() {
           onDisconnect={handleDisconnect}
           onToggleSync={handleToggleSync}
         />
-
-        <TelegramIntegrationCard
-          bot={telegramData?.bot || null}
-          users={telegramData?.users || []}
-          onRefresh={() => mutateTelegram()}
-        />
-
-        {/* WhatsApp link card */}
-        <Link href="/dashboard/configuracion/whatsapp" className="group">
-          <Card className="h-full hover:border-primary/50 transition-colors">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={cn("p-2 rounded-lg", "bg-green-100 dark:bg-green-900/30")}>
-                    <Smartphone className={cn("h-5 w-5", "text-green-600")} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">WhatsApp</CardTitle>
-                    <CardDescription>Vinculá WhatsApp para enviar presupuestos y documentos</CardDescription>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
 
         {/* Email link card */}
         <Link href="/dashboard/configuracion/email" className="group">

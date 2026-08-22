@@ -55,7 +55,6 @@
     "@studio/email-core": "workspace:*",
     "@studio/erp-core": "workspace:*",
     "@studio/fiscal": "workspace:*",
-    "@studio/pensio": "workspace:*",
     "@supabase/supabase-js": "^2.94.1",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.18",

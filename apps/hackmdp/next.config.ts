@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['*.trycloudflare.com', '*.lhr.life', '*.serveo.net'],
   basePath: process.env.BASE_PATH || '',
   transpilePackages: [
-    '@locus/core', '@studio/email-core', '@studio/erp-core', '@locus/db', '@studio/pensio',
+    '@locus/core', '@studio/email-core', '@studio/erp-core', '@locus/db',
     '@locus/ui',
     '@studio/fiscal',
   ],
