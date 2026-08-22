@@ -79,9 +79,12 @@ export async function chat(
   const activeProvider = provider || getProvider();
 
   /**
-   * Gemini y Ollama, tal como están integrados acá, solo aceptan texto. Si un
-   * mensaje viene multimodal se conserva el texto y se deja constancia de la
-   * imagen descartada, en vez de mandar "[object Object]" al modelo.
+   * Solo para Ollama, que en esta integración no acepta imágenes. Se conserva
+   * el texto y se deja constancia de la imagen descartada, en vez de mandar
+   * "[object Object]" al modelo.
+   *
+   * Gemini y el cliente compatible con OpenAI (Groq / OpenRouter) sí reciben
+   * el contenido multimodal tal cual.
    */
   const aTexto = (c: ChatMessage['content']): string => {
     if (typeof c === 'string') return c;
@@ -135,9 +138,12 @@ export async function checkStatus(provider?: AIProvider): Promise<AIStatus> {
   const activeProvider = provider || getProvider();
 
   /**
-   * Gemini y Ollama, tal como están integrados acá, solo aceptan texto. Si un
-   * mensaje viene multimodal se conserva el texto y se deja constancia de la
-   * imagen descartada, en vez de mandar "[object Object]" al modelo.
+   * Solo para Ollama, que en esta integración no acepta imágenes. Se conserva
+   * el texto y se deja constancia de la imagen descartada, en vez de mandar
+   * "[object Object]" al modelo.
+   *
+   * Gemini y el cliente compatible con OpenAI (Groq / OpenRouter) sí reciben
+   * el contenido multimodal tal cual.
    */
   const aTexto = (c: ChatMessage['content']): string => {
     if (typeof c === 'string') return c;
