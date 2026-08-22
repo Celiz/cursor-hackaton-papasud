@@ -51,7 +51,7 @@ que va por IPv4 en el puerto 6543 y con el usuario `postgres.<proyecto>`.
 | Sección | Qué hace |
 |---|---|
 | **Panel** | Campaña en curso, rinde por año, estado de los lotes, stock por ubicación |
-| **Copiloto** | Preguntas en lenguaje natural sobre 20 años de histórico |
+| **Copiloto** | Preguntas en lenguaje natural sobre el histórico |
 | **Campo** | Mapa de lotes, órdenes de trabajo por voz, establecimientos, insumos y dosis |
 | **Producción** | Histórico, campañas, variedades |
 | **Contactos** | Clientes y contactos |
@@ -78,8 +78,12 @@ dictado; quién decide qué lote, qué tarea y qué insumo son reales es esta ca
 contra los catálogos de la base. No puede inventar un lote que no existe ni colar
 una dosis fuera de rango sin que se marque.
 
+La ubicación se dice de dos maneras y acepta las dos: por número de lote
+("el 8", "lote 811") o por posición en el pivote ("pivote B, tercio 2"), que es
+como la escribe la orden en papel. Si lo dictado es ambiguo, **no adivina**: avisa.
+
 ```bash
-cd apps/hackmdp && npx tsx --test 'lib/campo/*.test.ts'   # 14 tests
+cd apps/hackmdp && npx tsx --test 'lib/campo/*.test.ts'   # 20 tests
 ```
 
 ### Mapa — `components/campo/MapaLotes.tsx`
@@ -91,21 +95,7 @@ Se carga con `dynamic({ ssr: false })` porque leaflet toca `window` al importars
 Los colores y tipos viven aparte en `lotes-estado.ts` para poder importarlos desde
 el server sin arrastrar leaflet.
 
-## Base de datos
-
-Las migraciones de Papasud son `packages/db/migrations/12*_papasud*.sql`:
-
-| Migración | Qué hace |
-|---|---|
-| `1200_papasud.sql` | Tablas `pap_*` + vista `vista_pap_historico` |
-| `1201_papasud_seed.sql` | Organización, usuario y catálogos |
-| `1202_papasud_historico.sql` | 21 campañas y 453 filas de rendimiento |
-| `1203_papasud_stock_ot.sql` | 4 ubicaciones, ~150 lotes, conteo cíclico, órdenes |
-
-Son **idempotentes y deterministas** (`setseed`). El resto de las migraciones
-(`000`–`11xx`) son el esquema base del ERP.
-
-### De dónde salen los datos
+## De dónde salen los datos
 
 **Son reales**, extraídos de los archivos de Papasud (`1300_papasud_datos_reales.sql`):
 
