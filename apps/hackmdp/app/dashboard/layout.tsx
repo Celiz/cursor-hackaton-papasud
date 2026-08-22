@@ -12,6 +12,7 @@ const CalendarSidebar = dynamic(() => import("@/components/calendar/CalendarSide
 import { GlobalDialogs } from "@/components/core-ui/GlobalDialogs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QuickCreateProvider } from "@/components/core-ui/QuickCreateProvider";
+import { RegistrarSW } from "@/components/campo/RegistrarSW";
 
 const EMAIL_SIDEBAR_WIDTH = 420;
 
@@ -39,6 +40,7 @@ export default function DashboardLayout({
 }) {
   return (
     <DataProvider>
+      <RegistrarSW />
       <OrgThemeProvider>
         <QuickCreateProvider>
               <CalendarSidebarProvider>

@@ -75,3 +75,88 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Caché para trabajar en el campo sin señal
+//
+// Sin esto la pantalla ni siquiera abre offline, y todo lo demás —la cola de
+// fotos, el GPS— no sirve de nada. Se cachea el armazón de la app y los
+// catálogos, que cambian poco.
+//
+// Las escrituras NO pasan por acá: van a la cola en IndexedDB, que sabe
+// reintentar. Un service worker que reencola POST a ciegas duplica órdenes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CACHE = "papasud-campo-v1";
+
+// Catálogos: cambian poco y hacen falta para elegir lote, tarea o insumo.
+const CATALOGOS = [
+  "/api/campo/catalogos",
+  "/api/campo/pivotes",
+];
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  const esCatalogo = CATALOGOS.some((c) => url.pathname.startsWith(c));
+  const esEstatico =
+    url.pathname.startsWith("/_next/static") ||
+    url.pathname.startsWith("/referencia/") ||
+    /\.(png|jpg|jpeg|svg|webp|woff2?)$/.test(url.pathname);
+
+  // Catálogos: red primero para tener lo último, caché si no hay señal.
+  if (esCatalogo) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copia = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copia));
+          return res;
+        })
+        .catch(() => caches.match(req).then((r) => r || Response.error()))
+    );
+    return;
+  }
+
+  // Estáticos: caché primero, que no cambian.
+  if (esEstatico) {
+    event.respondWith(
+      caches.match(req).then(
+        (r) =>
+          r ||
+          fetch(req).then((res) => {
+            const copia = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copia));
+            return res;
+          })
+      )
+    );
+    return;
+  }
+
+  // Navegación: si no hay red, se sirve lo último que se vio de esa pantalla.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copia = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copia));
+          return res;
+        })
+        .catch(() => caches.match(req).then((r) => r || caches.match("/dashboard/campo")))
+    );
+  }
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((claves) =>
+      Promise.all(claves.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    )
+  );
+});

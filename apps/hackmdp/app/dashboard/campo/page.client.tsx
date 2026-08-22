@@ -20,8 +20,10 @@ import {
 import { distanciaMetros, rumboGrados, type Pivote } from '@/lib/campo/pivote'
 import { UMBRAL_CONFIANZA, ETIQUETA_HALLAZGO, type Diagnostico } from '@/lib/campo/vision'
 import { referenciaDe, imagenesDe } from '@/lib/campo/referencia'
+import { useOffline } from '@/lib/hooks/use-offline'
 import {
   Camera, Satellite, Users, Loader2, AlertTriangle, X, Radio, MapPin,
+  CloudOff, UploadCloud, Trash2,
 } from 'lucide-react'
 
 const fetcher = async (url: string) => {
@@ -71,6 +73,7 @@ export default function VivoPageClient() {
   const [analizando, setAnalizando] = useState(false)
   const [ultimo, setUltimo] = useState<Diagnostico | null>(null)
   const camaraRef = useRef<HTMLInputElement>(null)
+  const offline = useOffline()
 
   useEffect(() => { setNombre(nombreGuardado()) }, [])
 
@@ -174,19 +177,34 @@ export default function VivoPageClient() {
       )
       const parcela = base?.lotes.find((l) => l.codigo === miDisp?.lote)
 
+      const carga = {
+        imagen: dataUrl,
+        miniatura: mini,
+        parcela_id: parcela?.id ?? null,
+        latitud: gps.lectura?.latitud ?? null,
+        longitud: gps.lectura?.longitud ?? null,
+        dispositivo: idDispositivo(),
+        tomada_por: nombre || null,
+        guardar: true,
+      }
+
+      // Sin señal la foto NO se pierde: queda en el teléfono y se manda sola
+      // cuando vuelva la conexión. El análisis necesita el modelo, que es
+      // remoto, así que eso sí espera.
+      if (!navigator.onLine) {
+        await offline.guardar(
+          'foto',
+          carga,
+          `Foto${parcela ? ` en ${parcela.codigo}` : ''} — ${new Date().toLocaleTimeString('es-AR')}`
+        )
+        toast.success('Sin señal: la foto quedó guardada y se va a analizar sola.')
+        return
+      }
+
       const res = await fetch('/api/campo/foto/analizar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imagen: dataUrl,
-          miniatura: mini,
-          parcela_id: parcela?.id ?? null,
-          latitud: gps.lectura?.latitud ?? null,
-          longitud: gps.lectura?.longitud ?? null,
-          dispositivo: idDispositivo(),
-          tomada_por: nombre || null,
-          guardar: true,
-        }),
+        body: JSON.stringify(carga),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'No se pudo analizar')
@@ -224,6 +242,55 @@ export default function VivoPageClient() {
           </Badge>
         </div>
       </div>
+
+      {(!offline.enLinea || offline.cola.length > 0) && (
+        <Card className={offline.enLinea ? undefined : 'border-amber-300 dark:border-amber-800'}>
+          <CardContent className="p-3 space-y-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {offline.enLinea ? (
+                <UploadCloud className="h-4 w-4 text-emerald-600 shrink-0" />
+              ) : (
+                <CloudOff className="h-4 w-4 text-amber-600 shrink-0" />
+              )}
+              <p className="text-sm flex-1 min-w-40">
+                {offline.enLinea
+                  ? `${offline.cola.length} pendiente${offline.cola.length === 1 ? '' : 's'} de subir`
+                  : `Sin señal. ${offline.cola.length} guardado${offline.cola.length === 1 ? '' : 's'} en el teléfono.`}
+              </p>
+              {offline.enLinea && offline.cola.length > 0 && (
+                <Button size="sm" variant="outline" onClick={offline.sincronizarYa}
+                        disabled={offline.sincronizando}>
+                  {offline.sincronizando
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Subiendo…</>
+                    : 'Subir ahora'}
+                </Button>
+              )}
+            </div>
+
+            {offline.cola.length > 0 && (
+              <div className="space-y-1">
+                {offline.cola.slice(0, 5).map((p) => (
+                  <div key={p.id} className="flex items-center gap-2 text-xs">
+                    <span className="flex-1 min-w-0 truncate text-muted-foreground">{p.resumen}</span>
+                    {p.intentos > 0 && (
+                      <span className="text-amber-600 shrink-0">
+                        {p.intentos} intento{p.intentos > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => offline.descartar(p.id)}
+                      className="text-muted-foreground hover:text-destructive shrink-0"
+                      title="Descartar"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {!gps.seguro && (
         <Card className="border-amber-300 dark:border-amber-800">
@@ -564,18 +631,26 @@ export default function VivoPageClient() {
           className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-4"
           onClick={() => setFotoAbierta(null)}
         >
-          <Card className="max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+          {/* Sin color de fondo: acá lo que tiene que resaltar es la foto, no
+              el cartel. El estado se lee del texto. */}
+          <Card
+            className="max-w-md w-full bg-white dark:bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
             <CardContent className="p-4 space-y-2">
               {fotoAbierta.miniatura && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={fotoAbierta.miniatura} alt="" className="w-full rounded bg-muted" />
               )}
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <Badge variant={fotoAbierta.urgente ? 'destructive' : 'secondary'}>
+                <span className="text-sm font-medium">
                   {fotoAbierta.hallazgo
                     ? ETIQUETA_HALLAZGO[fotoAbierta.hallazgo as keyof typeof ETIQUETA_HALLAZGO]
                     : 'Sin diagnóstico'}
-                </Badge>
+                  {fotoAbierta.urgente && (
+                    <span className="ml-1.5 font-normal text-muted-foreground">· urgente</span>
+                  )}
+                </span>
                 {fotoAbierta.lote && (
                   <span className="text-sm flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />{fotoAbierta.lote}
