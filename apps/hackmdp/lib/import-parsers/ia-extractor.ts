@@ -3,8 +3,9 @@ import { pdftotextLayout } from "./gematec";
 import { construirPrompt, parseSobreLLM } from "./ia-sobre";
 import { validarFilas } from "./ia-validacion";
 import type { FilaExtraida, ResultadoExtraccion } from "./ia-tipos";
+import { chat as chatGemini } from "@/lib/ai/gemini-client";
 
-const MODELO = process.env.IMPORT_IA_MODEL || "google/gemini-2.5-flash";
+const MODELO = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 /** Convierte el archivo a texto para el LLM. xlsx/xlsm/csv → CSV por hoja; pdf → pdftotext. */
 export async function archivoATexto(nombre: string, buf: Buffer): Promise<string> {
@@ -59,28 +60,16 @@ export function listarHojas(nombre: string, buf: Buffer): string[] {
   return wb.SheetNames;
 }
 
-/** Llama OpenRouter (chat completions) y devuelve el contenido de texto de la respuesta. */
-export async function llamarOpenRouter(system: string, user: string): Promise<string> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error("OPENROUTER_API_KEY no configurada");
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: MODELO,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      temperature: 0.1,
-      max_tokens: 16000,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
-  }
-  const data = await res.json();
-  return data?.choices?.[0]?.message?.content ?? "";
+/** Llama a Gemini (via Vercel AI SDK) y devuelve el contenido de texto de la respuesta. */
+export async function llamarIA(system: string, user: string): Promise<string> {
+  const { content } = await chatGemini(
+    [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    { maxTokens: 16000 }
+  );
+  return typeof content === "string" ? content : "";
 }
 
 /** texto → LLM → filas. Reintenta 1 vez si el JSON no parsea. */
@@ -88,7 +77,7 @@ export async function extraerFilasIA(texto: string, hint?: { tipo?: string }): P
   const { system, user } = construirPrompt(texto, hint);
   let ultimoError: unknown = null;
   for (let intento = 0; intento < 3; intento++) {
-    const raw = await llamarOpenRouter(system, user);
+    const raw = await llamarIA(system, user);
     try {
       return parseSobreLLM(raw);
     } catch (e) {

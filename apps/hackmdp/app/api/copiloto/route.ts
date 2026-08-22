@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { generateText, stepCountIs, tool } from 'ai'
+import { z } from 'zod'
 import { getSession } from '@/lib/auth'
-import { chat } from '@/lib/ai/ai-service'
-import { extractSqlFromResponse, validateQuery, ensureLimit, executeQuery } from '@/lib/ai/tools/query-database'
+import { getGeminiModel } from '@/lib/ai/gemini-client'
+import { validateQuery, ensureLimit, executeQuery } from '@/lib/ai/tools/query-database'
 
 export const revalidate = 0
 
 /**
  * Copiloto sobre el histórico productivo.
  *
- * El modelo NO recuerda los números: escribe una consulta, la consulta corre
- * contra la base, y la respuesta se redacta sobre las filas que volvieron. Si la
- * consulta no devuelve nada, se dice que no hay datos — no se completa el hueco.
+ * El modelo NO recuerda los números: tiene una tool `ejecutar_consulta` para
+ * correr SELECTs contra la base y VE el resultado (filas, o el error de
+ * Postgres) en el mismo turno. Si erró la tabla o una columna no existe, se
+ * lo decimos y puede corregir el SQL antes de responder — a diferencia del
+ * flujo anterior (generar SQL a ciegas en un solo paso), acá se autocorrige.
  *
- * Tres candados sobre el SQL que escribe el modelo:
+ * Tres candados sobre el SQL que escribe el modelo, aplicados en la tool:
  *   1. `validateQuery` rechaza todo lo que no sea un SELECT.
  *   2. Se fuerza el filtro de organización, así no se puede leer otra empresa.
  *   3. `ensureLimit` acota la cantidad de filas.
@@ -33,14 +37,21 @@ Otras tablas:
   pap_variedades(org_id, nombre, ciclo, destino, notas)
   pap_ordenes_trabajo(org_id, numero, parcela_id, tarea, fecha, responsable_nombre, maquinaria, horas, estado, origen, origen_texto)
   pap_insumos(org_id, nombre, tipo, principio_activo, unidad, dosis_min, dosis_max)
+  pap_movimientos(org_id, tipo, remito, fecha, variedad, lote, categoria, calibre, bolsas, kgs, kg_promedio,
+                   transporte, destino, color_bolsa, color_hilo, dtv, observaciones)
+    -- LOS "movimientos" son estos: despachos/recepciones de semilla (remitos, bolsas, kgs, transporte). 436 filas.
   depositos(org_id, codigo, nombre, tipo, ciudad)          -- las 4 ubicaciones de stock
   productos(org_id, codigo, nombre, categoria)             -- variedad x categoria de semilla
-  stock_depositos(producto_id, deposito_id, cantidad_disponible, cantidad_reservada)  -- en KILOS
+  stock_depositos(producto_id, deposito_id, cantidad_disponible, cantidad_reservada, cantidad_en_transito,
+                   cantidad_cuarentena, cantidad_defectuosa, cantidad_total)  -- en KILOS
+    -- OJO: stock_depositos NO tiene org_id. Para acotarlo a la organización hacé
+    -- JOIN con productos (p.org_id) o depositos (d.org_id) y filtrá por esa columna.
 
 Notas de dominio:
 - El rendimiento se mide en toneladas por hectárea (t/ha). Un valor normal está entre 30 y 45.
 - "campaña 2021" significa campana_anio = 2021 (el año de cosecha).
 - 2009 y 2018 fueron campañas secas; 2012 tuvo exceso hídrico.
+- Ya tenés acá el esquema completo: no consultes information_schema ni pg_catalog.
 `
 
 function forzarOrg(sql: string, orgId: string): string {
@@ -63,63 +74,78 @@ export async function POST(request: NextRequest) {
   if (!session?.org_id) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
+  const orgId = session.org_id
 
   const { pregunta } = await request.json()
   if (!pregunta || typeof pregunta !== 'string') {
     return NextResponse.json({ error: 'Falta la pregunta' }, { status: 400 })
   }
 
-  // ── 1. El modelo escribe la consulta ──────────────────────────────────────
-  let sql: string | null = null
+  // Última consulta que devolvió filas — es la que respalda la respuesta final.
+  let ultimaConsulta: { sql: string; filas: Record<string, any>[]; rowCount: number } | null = null
+
+  const ejecutarConsulta = tool({
+    description:
+      'Ejecuta una consulta SELECT contra la base de datos histórica de Papasud y devuelve las filas. ' +
+      'Si la tabla o columna no existe, o el SQL es inválido, devuelve un error: leelo y corregí la consulta.',
+    inputSchema: z.object({
+      sql: z.string().describe('Consulta SQL de PostgreSQL. Debe empezar con SELECT.'),
+    }),
+    execute: async ({ sql }) => {
+      const validacion = validateQuery(sql)
+      if (!validacion.valid) {
+        return { error: validacion.error }
+      }
+
+      const sqlSeguro = ensureLimit(forzarOrg(sql, orgId))
+      const resultado = await executeQuery(sqlSeguro)
+      if (!resultado.success) {
+        return { error: resultado.error, sql: sqlSeguro }
+      }
+
+      const filas = resultado.data ?? []
+      const rowCount = resultado.rowCount ?? filas.length
+      ultimaConsulta = { sql: sqlSeguro, filas, rowCount }
+      return { rowCount, filas: filas.slice(0, 60) }
+    },
+  })
+
+  let texto = ''
   try {
-    const respuesta = await chat(
-      [
-        {
-          role: 'system',
-          content:
-            'Sos un analista de datos de Papasud, productora de semilla de papa. ' +
-            'Traducís preguntas en español a UNA consulta SQL de PostgreSQL. ' +
-            'Respondés SOLO con la consulta, sin explicación y sin bloque de código. ' +
-            'Usá siempre SELECT. Nunca modifiques datos.\n' +
-            'Incluí SIEMPRE las columnas que identifican la fila (variedad, lote, campana_anio, ' +
-            'establecimiento, según corresponda) además de la métrica, para que la respuesta se ' +
-            'pueda redactar sin ambigüedad. Cuando la pregunta pida un valor típico o un total, ' +
-            'usá agregados (avg, sum, count, min, max) con GROUP BY y redondeá con round(...::numeric, 2).\n\n' + ESQUEMA,
-        },
-        { role: 'user', content: pregunta },
-      ],
-      { temperature: 0 }
-    )
-    sql = extractSqlFromResponse(typeof respuesta.content === 'string' ? respuesta.content : '')
+    const resultado = await generateText({
+      model: getGeminiModel(),
+      temperature: 0,
+      system:
+        'Sos un analista de datos de Papasud, productora de semilla de papa. ' +
+        'Para responder preguntas sobre el histórico productivo usás la tool `ejecutar_consulta`: ' +
+        'escribís un SELECT de PostgreSQL, la corrés, y ves las filas (o el error) que devuelve. ' +
+        'Si falla porque la tabla o columna no existe, o si las filas no responden la pregunta, ' +
+        'corregí el SQL y volvé a llamar a la tool — no te quedes con el primer intento si está mal. ' +
+        'Incluí siempre las columnas que identifican la fila (variedad, lote, campana_anio, ' +
+        'establecimiento, según corresponda) además de la métrica pedida. Para valores típicos o ' +
+        'totales usá agregados (avg, sum, count, min, max) con GROUP BY y redondeá con round(...::numeric, 2).\n\n' +
+        'Cuando ya tengas los datos que necesitás, redactá la respuesta final: dos o tres oraciones, ' +
+        'en español rioplatense, sin listas ni encabezados, usando EXCLUSIVAMENTE los números que ' +
+        'devolvió la tool. No inventes ni redondees hacia valores "lindos". Si ninguna consulta ' +
+        'devuelve datos que respondan la pregunta, decí que no hay datos disponibles.\n\n' + ESQUEMA,
+      messages: [{ role: 'user', content: pregunta }],
+      tools: { ejecutar_consulta: ejecutarConsulta },
+      stopWhen: stepCountIs(4),
+    })
+    texto = resultado.text?.trim() ?? ''
   } catch (error) {
-    console.error('[copiloto] error del modelo al escribir SQL:', error)
+    console.error('[copiloto] error del modelo:', error)
     return NextResponse.json({ error: 'El modelo no respondió. Probá de nuevo.' }, { status: 502 })
   }
 
-  if (!sql) {
+  if (!ultimaConsulta) {
     return NextResponse.json(
-      { error: 'No pude traducir esa pregunta a una consulta. Probá reformularla.' },
+      { error: texto || 'No pude traducir esa pregunta a una consulta. Probá reformularla.' },
       { status: 422 }
     )
   }
 
-  const validacion = validateQuery(sql)
-  if (!validacion.valid) {
-    return NextResponse.json({ error: validacion.error, sql }, { status: 422 })
-  }
-
-  sql = ensureLimit(forzarOrg(sql, session.org_id))
-
-  // ── 2. La consulta corre contra la base ───────────────────────────────────
-  const resultado = await executeQuery(sql)
-  if (!resultado.success) {
-    return NextResponse.json(
-      { error: `La consulta falló: ${resultado.error}`, sql },
-      { status: 422 }
-    )
-  }
-
-  const filas = resultado.data ?? []
+  const { sql, filas, rowCount } = ultimaConsulta as { sql: string; filas: Record<string, any>[]; rowCount: number }
 
   if (filas.length === 0) {
     return NextResponse.json({
@@ -130,38 +156,10 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // ── 3. Se redacta la respuesta SOBRE las filas, no sobre la memoria ───────
-  let respuestaTexto = ''
-  try {
-    const redaccion = await chat(
-      [
-        {
-          role: 'system',
-          content:
-            'Redactás la respuesta usando EXCLUSIVAMENTE las filas que te paso. ' +
-            'No agregues números que no estén en los datos. No estimes ni redondees hacia valores "lindos". ' +
-            'Respondé en dos o tres oraciones, en español rioplatense, sin listas ni encabezados. ' +
-            'Si los datos no alcanzan para responder, decilo.',
-        },
-        {
-          role: 'user',
-          content:
-            `Pregunta: ${pregunta}\n\n` +
-            `Consulta que se ejecutó (te dice qué significa cada columna):\n${sql}\n\n` +
-            `Filas (${filas.length}):\n${JSON.stringify(filas.slice(0, 60))}`,
-        },
-      ],
-      { temperature: 0.2 }
-    )
-    respuestaTexto = typeof redaccion.content === 'string' ? redaccion.content.trim() : ''
-  } catch (error) {
-    console.error('[copiloto] error al redactar:', error)
-  }
-
   return NextResponse.json({
-    respuesta: respuestaTexto || 'Consultá la tabla de abajo: son los datos que devolvió la consulta.',
+    respuesta: texto || 'Consultá la tabla de abajo: son los datos que devolvió la consulta.',
     sql,
     filas,
-    rowCount: resultado.rowCount ?? filas.length,
+    rowCount,
   })
 }

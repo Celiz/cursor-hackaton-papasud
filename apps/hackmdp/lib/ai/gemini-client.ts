@@ -1,79 +1,30 @@
 /**
  * Google Gemini API Client
- * Handles communication with Google's Gemini API
+ * Uses the Vercel AI SDK (@ai-sdk/google) to talk to Gemini directly.
  */
 
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { generateText, type UserContent } from 'ai';
+import type { ContentPart } from './groq-client';
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
-// API endpoint for Gemini
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-export interface GeminiMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
-}
-
-export interface GeminiRequest {
-  contents: GeminiMessage[];
-  systemInstruction?: {
-    parts: { text: string }[];
-  };
-  generationConfig?: {
-    temperature?: number;
-    topP?: number;
-    topK?: number;
-    maxOutputTokens?: number;
-    stopSequences?: string[];
-  };
-}
-
-export interface GeminiResponse {
-  candidates: {
-    content: {
-      parts: { text: string }[];
-      role: string;
-    };
-    finishReason: string;
-    index: number;
-  }[];
-  usageMetadata?: {
-    promptTokenCount: number;
-    candidatesTokenCount: number;
-    totalTokenCount: number;
-  };
-}
+const google = GEMINI_API_KEY ? createGoogleGenerativeAI({ apiKey: GEMINI_API_KEY }) : null;
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | ContentPart[];
 }
 
-/**
- * Convert our standard chat messages to Gemini format
- */
-function convertToGeminiFormat(messages: ChatMessage[]): {
-  contents: GeminiMessage[];
-  systemInstruction?: { parts: { text: string }[] };
-} {
-  let systemInstruction: { parts: { text: string }[] } | undefined;
-  const contents: GeminiMessage[] = [];
-
-  for (const msg of messages) {
-    if (msg.role === 'system') {
-      // Gemini uses systemInstruction for system messages
-      systemInstruction = {
-        parts: [{ text: msg.content }],
-      };
-    } else {
-      contents.push({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
-      });
-    }
-  }
-
-  return { contents, systemInstruction };
+/** Gemini sí entiende imágenes: a diferencia del resto, acá no se descartan. */
+function aContenidoGemini(content: string | ContentPart[]): string | UserContent {
+  if (typeof content === 'string') return content;
+  return content.map(parte =>
+    parte.type === 'text'
+      ? { type: 'text' as const, text: parte.text }
+      : { type: 'image' as const, image: parte.image_url.url }
+  );
 }
 
 /**
@@ -84,7 +35,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Chat with Gemini API (with automatic retry on rate limit errors)
+ * Chat with Gemini via the Vercel AI SDK (with retry on rate limit/server errors)
  */
 export async function chat(
   messages: ChatMessage[],
@@ -93,27 +44,20 @@ export async function chat(
     maxTokens?: number;
   }
 ): Promise<ChatMessage> {
-  if (!GEMINI_API_KEY) {
+  if (!google) {
     throw new Error('GEMINI_API_KEY no está configurada');
   }
 
-  const { contents, systemInstruction } = convertToGeminiFormat(messages);
+  const systemMsg = messages.find(m => m.role === 'system')?.content;
+  const system = typeof systemMsg === 'string' ? systemMsg : undefined;
+  const rest = messages
+    .filter(m => m.role !== 'system')
+    .map(m =>
+      m.role === 'user'
+        ? { role: 'user' as const, content: aContenidoGemini(m.content) }
+        : { role: 'assistant' as const, content: typeof m.content === 'string' ? m.content : '' }
+    );
 
-  const requestBody: GeminiRequest = {
-    contents,
-    generationConfig: {
-      temperature: options?.temperature ?? 0.1,
-      maxOutputTokens: options?.maxTokens ?? 2048,
-    },
-  };
-
-  if (systemInstruction) {
-    requestBody.systemInstruction = systemInstruction;
-  }
-
-  const url = `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-  // Retry configuration
   const maxRetries = 3;
   const baseDelay = 2000; // 2 seconds
 
@@ -121,61 +65,31 @@ export async function chat(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
+      const { text } = await generateText({
+        model: google(GEMINI_MODEL),
+        system,
+        messages: rest,
+        temperature: options?.temperature ?? 0.1,
+        maxOutputTokens: options?.maxTokens ?? 2048,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        // Check if it's a rate limit error (429) or server error (5xx)
-        if (response.status === 429 || response.status >= 500) {
-          lastError = new Error(`Gemini API error: ${response.status}`);
-          // Exponential backoff: 2s, 4s, 8s
-          const delay = baseDelay * Math.pow(2, attempt);
-          console.log(`Gemini rate limit/error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
-          await sleep(delay);
-          continue;
-        }
-
-        // For other errors, throw immediately
-        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-      }
-
-      const data: GeminiResponse = await response.json();
-
-      if (!data.candidates || data.candidates.length === 0) {
-        throw new Error('Gemini no devolvió ninguna respuesta');
-      }
-
-      const assistantContent = data.candidates[0].content.parts
-        .map(p => p.text)
-        .join('');
-
-      return {
-        role: 'assistant',
-        content: assistantContent,
-      };
+      return { role: 'assistant', content: text };
     } catch (error: any) {
-      // Network errors - retry
-      if (error.message?.includes('fetch failed') || error.message?.includes('ECONNRESET')) {
+      const status = error?.statusCode ?? error?.status;
+      const isRetryable = status === 429 || status >= 500 || error.message?.includes('fetch failed');
+
+      if (isRetryable) {
         lastError = error;
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`Gemini network error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        console.log(`Gemini error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
         await sleep(delay);
         continue;
       }
 
-      // Other errors - throw immediately
       throw error;
     }
   }
 
-  // All retries exhausted
   throw lastError || new Error('Gemini API error after retries');
 }
 
@@ -187,7 +101,7 @@ export async function checkGeminiStatus(): Promise<{
   model: string;
   error?: string;
 }> {
-  if (!GEMINI_API_KEY) {
+  if (!google) {
     return {
       available: false,
       model: GEMINI_MODEL,
@@ -196,33 +110,13 @@ export async function checkGeminiStatus(): Promise<{
   }
 
   try {
-    // Test with a simple request
-    const url = `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'test' }] }],
-        generationConfig: { maxOutputTokens: 10 },
-      }),
+    await generateText({
+      model: google(GEMINI_MODEL),
+      messages: [{ role: 'user', content: 'test' }],
+      maxOutputTokens: 10,
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      return {
-        available: false,
-        model: GEMINI_MODEL,
-        error: `API error: ${response.status}`,
-      };
-    }
-
-    return {
-      available: true,
-      model: GEMINI_MODEL,
-    };
+    return { available: true, model: GEMINI_MODEL };
   } catch (error: any) {
     return {
       available: false,
@@ -230,6 +124,16 @@ export async function checkGeminiStatus(): Promise<{
       error: error.message || 'Error desconocido',
     };
   }
+}
+
+/**
+ * Language model instance, para usar con generateText/streamText y tool calling directo.
+ */
+export function getGeminiModel() {
+  if (!google) {
+    throw new Error('GEMINI_API_KEY no está configurada');
+  }
+  return google(GEMINI_MODEL);
 }
 
 /**

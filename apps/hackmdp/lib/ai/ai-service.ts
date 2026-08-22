@@ -94,10 +94,10 @@ export async function chat(
   };
 
   if (activeProvider === 'gemini') {
-    // Gemini doesn't support tools in our current implementation
+    // Gemini no soporta tools acá, pero sí imágenes: se pasan tal cual.
     const geminiMessages = messages.map(m => ({
       role: m.role as 'system' | 'user' | 'assistant',
-      content: aTexto(m.content),
+      content: m.content ?? '',
     }));
     return gemini.chat(geminiMessages);
   }

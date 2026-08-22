@@ -5,7 +5,7 @@ import { origenPublico } from '@/lib/base-url'
 // /api/auth/demo con la organización y los permisos reales.
 const AUTOLOGIN = process.env.DEMO_AUTOLOGIN === 'true'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const haySesion = Boolean(request.cookies.get('auth_token')?.value)
 
