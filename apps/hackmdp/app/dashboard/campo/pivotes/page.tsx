@@ -1,7 +1,7 @@
-export const dynamic = "force-dynamic";
-import nextDynamic from 'next/dynamic'
-const PageClient = nextDynamic(() => import('./page.client'))
+import { redirect } from 'next/navigation'
 
+// Unificado en /dashboard/campo: el plano, el GPS, la cámara y los avisos son
+// la misma pantalla. Redirect para no romper links viejos.
 export default function Page() {
-  return <PageClient />
+  redirect('/dashboard/campo')
 }

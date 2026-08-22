@@ -19,6 +19,7 @@ import {
 } from '@/lib/hooks/use-presencia'
 import { distanciaMetros, rumboGrados, type Pivote } from '@/lib/campo/pivote'
 import { UMBRAL_CONFIANZA, ETIQUETA_HALLAZGO, type Diagnostico } from '@/lib/campo/vision'
+import { referenciaDe, imagenesDe } from '@/lib/campo/referencia'
 import {
   Camera, Satellite, Users, Loader2, AlertTriangle, X, Radio, MapPin,
 } from 'lucide-react'
@@ -66,6 +67,7 @@ export default function VivoPageClient() {
   const [ancla, setAncla] = useState<{ lat: number; lng: number } | null>(null)
   const [pivoteVisible, setPivoteVisible] = useState<string | null>(null)
   const [fotoAbierta, setFotoAbierta] = useState<FotoApi | null>(null)
+  const [loteElegido, setLoteElegido] = useState<string | null>(null)
   const [analizando, setAnalizando] = useState(false)
   const [ultimo, setUltimo] = useState<Diagnostico | null>(null)
   const camaraRef = useRef<HTMLInputElement>(null)
@@ -142,6 +144,12 @@ export default function VivoPageClient() {
   }, [fotosData?.fotos, enPlano])
 
   const miPosicion = gps.lectura ? enPlano(gps.lectura.latitud, gps.lectura.longitud) : null
+
+  // En qué lote estoy parado, según dónde cae mi radio dentro del cuadrante.
+  const miUbicacion = (presencia?.dispositivos ?? []).find(
+    (d) => d.dispositivo === idDispositivo()
+  )
+  const loteDetalle = (base?.lotes ?? []).find((l) => l.id === loteElegido) ?? null
 
   // ── Cámara ───────────────────────────────────────────────────────────────
   const sacarFoto = async (archivo: File) => {
@@ -283,14 +291,86 @@ export default function VivoPageClient() {
 
       {ultimo && (
         <Card className={ultimo.urgente ? 'border-red-400 dark:border-red-800' : undefined}>
-          <CardContent className="p-3 flex items-start gap-3 flex-wrap">
-            <Badge variant={ultimo.confianza >= UMBRAL_CONFIANZA ? 'secondary' : 'outline'}>
-              {ultimo.etiqueta} · {(ultimo.confianza * 100).toFixed(0)}%
-            </Badge>
-            <p className="text-sm flex-1 min-w-48">{ultimo.visible ?? ultimo.observacion}</p>
-            <Button size="icon" variant="ghost" onClick={() => setUltimo(null)}>
-              <X className="h-4 w-4" />
-            </Button>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={ultimo.confianza >= UMBRAL_CONFIANZA ? 'secondary' : 'outline'}>
+                  {ultimo.etiqueta}
+                </Badge>
+                {ultimo.severidad && <Badge variant="outline">severidad {ultimo.severidad}</Badge>}
+                <span className="text-sm text-muted-foreground">
+                  confianza {(ultimo.confianza * 100).toFixed(0)}%
+                </span>
+              </div>
+              <Button size="icon" variant="ghost" onClick={() => setUltimo(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {ultimo.urgente && (
+              <p className="text-sm text-red-700 dark:text-red-400 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                En semilla fiscalizada esto conviene confirmarlo el mismo día.
+              </p>
+            )}
+
+            {ultimo.visible && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Lo que se ve</p>
+                <p className="text-sm">{ultimo.visible}</p>
+              </div>
+            )}
+            {ultimo.recomendacion && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Sugerencia</p>
+                <p className="text-sm">{ultimo.recomendacion}</p>
+              </div>
+            )}
+
+            {(() => {
+              const ref = referenciaDe(ultimo.hallazgo)
+              const imgs = imagenesDe(ultimo.hallazgo)
+              if (!ref && imgs.length === 0) return null
+              return (
+                <div className="rounded-md border bg-muted/40 p-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Ficha de {ultimo.etiqueta.toLowerCase()}
+                  </p>
+                  {ref && (
+                    <ul className="text-sm space-y-0.5 list-disc list-inside marker:text-muted-foreground">
+                      {ref.signos.map((sg, i) => <li key={i}>{sg}</li>)}
+                    </ul>
+                  )}
+                  {ref?.diferencial && (
+                    <p className="text-xs">
+                      <span className="text-muted-foreground">Se confunde con: </span>{ref.diferencial}
+                    </p>
+                  )}
+                  {imgs.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[11px] text-muted-foreground">
+                        Imágenes de referencia — compará con tu foto:
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5 max-w-sm">
+                        {imgs.map((src) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={src} src={src} alt="Referencia"
+                               className="w-full aspect-square object-cover rounded border" />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Fuente: PlantVillage (hojas fotografiadas en laboratorio).
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            <p className="text-[11px] text-muted-foreground border-t pt-2">
+              Es una observación, no un diagnóstico de laboratorio. No indica dosis:
+              la decisión es del agrónomo.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -313,6 +393,8 @@ export default function VivoPageClient() {
             <PlanoPivote
               pivote={pivoteActual ?? ''}
               lotes={lotes}
+              seleccionado={loteElegido}
+              onSeleccionar={(l) => setLoteElegido(l.id)}
               dispositivos={dispositivos}
               fotos={fotos}
               onFoto={(f) => setFotoAbierta(fotosData?.fotos.find((x) => x.id === f.id) ?? null)}
@@ -355,6 +437,91 @@ export default function VivoPageClient() {
               )}
             </CardContent>
           </Card>
+
+          {/* Dónde estoy y qué tan preciso es. Es lo que hace creíble que sea
+              en vivo: los números se mueven mientras uno camina. */}
+          <Card className={miUbicacion?.lote ? 'border-emerald-400 dark:border-emerald-800' : undefined}>
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" />Estás parado en
+                </p>
+                {gps.estado === 'siguiendo' && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-emerald-600">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    en vivo
+                  </span>
+                )}
+              </div>
+
+              {miUbicacion ? (
+                <>
+                  <p className="text-2xl font-semibold">{miUbicacion.lote ?? '—'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pivote {miUbicacion.pivote} · cuadrante {miUbicacion.cuadrante}
+                    {miUbicacion.tercio ? ` · tercio ${miUbicacion.tercio}` : ''}
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {gps.lectura
+                    ? 'Estás fuera de los círculos de riego. Prendé el modo demo para probarlo desde donde estés.'
+                    : 'Prendé el GPS y activá «Compartir mi posición».'}
+                </p>
+              )}
+
+              {gps.lectura && (
+                <dl className="text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pt-1 border-t">
+                  <dt className="text-muted-foreground">Latitud</dt>
+                  <dd className="tabular-nums text-right">{gps.lectura.latitud.toFixed(6)}</dd>
+                  <dt className="text-muted-foreground">Longitud</dt>
+                  <dd className="tabular-nums text-right">{gps.lectura.longitud.toFixed(6)}</dd>
+                  <dt className="text-muted-foreground">Precisión</dt>
+                  <dd className="tabular-nums text-right">
+                    <span className={gps.lectura.precision_m > 20 ? 'text-amber-600' : ''}>
+                      ±{gps.lectura.precision_m.toFixed(0)} m
+                    </span>
+                  </dd>
+                  {gps.lectura.altitud !== null && (
+                    <>
+                      <dt className="text-muted-foreground">Altitud</dt>
+                      <dd className="tabular-nums text-right">{gps.lectura.altitud.toFixed(0)} m</dd>
+                    </>
+                  )}
+                  {gps.lectura.velocidad !== null && gps.lectura.velocidad > 0 && (
+                    <>
+                      <dt className="text-muted-foreground">Velocidad</dt>
+                      <dd className="tabular-nums text-right">
+                        {(gps.lectura.velocidad * 3.6).toFixed(1)} km/h
+                      </dd>
+                    </>
+                  )}
+                </dl>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Ficha del lote que se toca en el plano */}
+          {loteDetalle && (
+            <Card>
+              <CardContent className="p-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{loteDetalle.codigo}</p>
+                  <Badge variant="outline">{loteDetalle.estado}</Badge>
+                </div>
+                <dl className="text-xs grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                  <dt className="text-muted-foreground">Superficie</dt>
+                  <dd className="tabular-nums text-right">
+                    {Number(loteDetalle.superficie_ha).toFixed(1)} ha
+                  </dd>
+                  <dt className="text-muted-foreground">Cuadrante</dt>
+                  <dd className="text-right">{loteDetalle.cuadrante}</dd>
+                  <dt className="text-muted-foreground">Tercio</dt>
+                  <dd className="text-right">{loteDetalle.tercio}</dd>
+                </dl>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Los problemas que hay que ir a revisar */}
           <AvisosCampo compacto />

@@ -1915,10 +1915,11 @@ const AGRO_SECTION_COPILOTO: Section = {
 const AGRO_SECTION_CAMPO: Section = {
   title: "Campo",
   icon: Sprout,
-  url: `/dashboard/campo/pivotes`,
+  url: `/dashboard/campo`,
   items: [
-    { title: "En vivo", url: `/dashboard/campo/vivo`, icon: Radio },
-    { title: "Pivotes", url: `/dashboard/campo/pivotes`, icon: Target },
+    // El plano del pivote, el GPS en vivo, la cámara y los avisos son una sola
+    // pantalla: separarlos obligaba a saltar de una a otra para sacar una foto.
+    { title: "El campo en vivo", url: `/dashboard/campo`, icon: Radio },
     { title: "Foto del cultivo", url: `/dashboard/campo/foto`, icon: Eye },
     { title: "Mapa de lotes", url: `/dashboard/campo/mapa`, icon: MapPin },
     { title: "Lotes", url: `/dashboard/campo/lotes`, icon: Leaf },
