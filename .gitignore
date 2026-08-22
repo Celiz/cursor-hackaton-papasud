@@ -5,3 +5,7 @@ node_modules/
 .env.local
 *.log
 *.tsbuildinfo
+
+# Herramientas de sesión, no del proyecto
+.claude/
+.superpowers/

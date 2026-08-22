@@ -1,7 +1,6 @@
 import { query } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { syncPersonaListas } from "@/lib/email/listas-sync";
 import { parseContactList } from "@/lib/contact-fields";
 
 export const revalidate = 0;
@@ -176,14 +175,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sync incremental a listas dinámicas/híbridas. Silencioso ante fallo:
-    // no bloquea la creación del contacto si el sync tiene un error.
-    try {
-      await syncPersonaListas(session.org_id, persona.id);
-    } catch (syncErr) {
-      console.error("syncPersonaListas (POST personas) failed:", syncErr);
-    }
-
     return NextResponse.json(persona);
   } catch (error: any) {
     console.error("Error creating persona:", error);
@@ -257,11 +248,6 @@ export async function PATCH(request: Request) {
     }
 
     // Sync incremental a listas dinámicas/híbridas.
-    try {
-      await syncPersonaListas(session.org_id, id);
-    } catch (syncErr) {
-      console.error("syncPersonaListas (PATCH personas) failed:", syncErr);
-    }
 
     return NextResponse.json(persona);
   } catch (error: any) {

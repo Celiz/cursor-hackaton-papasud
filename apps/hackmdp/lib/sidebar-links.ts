@@ -1865,7 +1865,7 @@ const PETSHOP_SECTION_VENTAS: Section = {
 // FACTORY
 // ========================================
 
-export const EPIDEMIOLOGIA_ADMIN_EMAIL = 'nahuel.sigismondi@gmail.com'
+export const EPIDEMIOLOGIA_ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? ''
 
 // Users who get simplified CRM-only sidebar instead of full Ventas section
 const SECTION_COMERCIAL_NEW: Section = {

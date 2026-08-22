@@ -158,7 +158,7 @@ const TOOL_META: Record<
 
 const EXAMPLES = [
   "Nuevo servicio para Hospital Central, equipo Olympus CX41, no enciende, urgente",
-  "Oportunidad con Sanatorio del Norte, están interesados en un hemograma Wiener, 800 mil",
+  "Oportunidad con Parmentier, quieren 300 bolsas de Agata exportación",
   "Llamar mañana a las 10 a María Paz del lab Belgrano para seguimiento",
   "Nuevo cliente Lab Sur, CUIT 30-12345678-9, info@labsur.com.ar",
 ];

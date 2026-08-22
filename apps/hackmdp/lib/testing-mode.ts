@@ -7,7 +7,7 @@
  *
  * Env vars:
  *   TESTING_MODE=true
- *   TESTING_ALLOWED_EMAILS=nahuel.sigismondi@gmail.com,other@test.com
+ *   TESTING_ALLOWED_EMAILS=alguien@ejemplo.com,otro@ejemplo.com
  *   TESTING_ALLOWED_PHONES=5492235633653,5492230000000
  */
 

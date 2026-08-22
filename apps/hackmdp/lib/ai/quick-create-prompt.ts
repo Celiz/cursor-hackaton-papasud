@@ -21,7 +21,7 @@ Trabajás en el rubro de **electromedicina y laboratorios de análisis clínicos
 
 **Equipos frecuentes:**
 - Microscopios, pipetas automáticas, centrífugas
-- Hemogramas, contadores hematológicos (Wiener CM 250, Wiener Counter)
+- Semilla de papa por variedad y categoría fiscalizada (Inicial 1, 2 y 3)
 - Espectrofotómetros, fotómetros
 - Autoanalizadores químicos (BioSystems BA400, Siemens, Roche)
 - Coaguladores, lavadores de placas
@@ -29,7 +29,7 @@ Trabajás en el rubro de **electromedicina y laboratorios de análisis clínicos
 - ESR (eritrosedimentación), gasómetros
 
 **Marcas comunes:**
-Olympus, Nikon, Wiener Lab, Abbott, Roche, Siemens, BioSystems, Bio-Rad, Socorex, Eppendorf, Sysmex, Mindray
+Agata, Spunta, Asterix, Atlantic, Daifla, King Russet, Memphis, Sunred, Quintera, Ludmilla
 
 **Tipos de cliente:**
 - Hospitales públicos y privados (HOSPITAL MUNICIPAL, HOSPITAL X)
