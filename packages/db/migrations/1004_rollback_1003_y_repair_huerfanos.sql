@@ -1,0 +1,65 @@
+-- Rollback de migration 1003 + reparaciones puntuales en aeterna2 (= prod actual).
+--
+-- Contexto: la migration 1003 estaba basada en una premisa equivocada. Asumi
+-- que prod era Supabase legacy (donde pagos.factura_id es siempre NULL), pero
+-- el verdadero prod era aeterna server (ssh aeterna) — y ahora aeterna2 LAN.
+-- En aeterna ex-prod los cobros SI tenian factura_id setado (761 de 762).
+--
+-- Esta migration NO se ejecuta automaticamente porque las reparaciones se
+-- hicieron via SQL pipes en la sesion del 2026-05-28. Queda solo como
+-- documentacion de los cambios para auditoria.
+--
+-- Cambios aplicados en la sesion (NO re-ejecutar):
+--
+-- 1. ROLLBACK de migration 1003 — restaurar desde aeterna ex-prod (ssh aeterna):
+--    - cobros.factura_id (760 cobros)
+--    - facturas.total_pagado + estado (todas las IVR de Uno)
+--    - cobros_aplicaciones (1203 rows restauradas, 1 fallo por FK orfano)
+--    - Vista vista_cuentas_corrientes_ivr vuelta a version 1002
+--
+-- 2. Cobro post-cutover huerfano:
+--    UPDATE cobros SET factura_id='de19d44d-94e9-4fbd-8369-55160e813c40'
+--    WHERE id='832d2dba-c06c-4d93-ba8c-9c225e8c1c07';
+--    (cobro Soria Juan Manuel $379021 creado el 28/05, perdio factura_id al
+--    rollback porque el IVR-001079 no existe en aeterna ex-prod)
+--
+-- 3. Factura IVR-000884 / cfe7d67c huerfana (cliente_id NULL pero 4 cobros
+--    consistentes apuntaban a ella). Verificado contra Supabase legacy =
+--    SILVA EDGARDO FLAVIO:
+--    UPDATE facturas SET cliente_id='e050f15f-ab30-4315-8a24-a3d0283602c2',
+--      total_pagado=1500000, estado='pagada'
+--    WHERE id='cfe7d67c-ad16-441c-86c3-0d4542cc8121';
+--
+-- 4. Cliente fantasma 98c067ab-d5da-4a37-a87a-1de66ab833de (cliente_id
+--    referenciado por facturas pero no existe en tabla clientes). Legacy
+--    indica que el cliente es GEIS VIRGINIA, cuyo CUIT (27-26457991-6) matchea
+--    en aeterna2 con BG ANALIZADORES (id 4f3dbf77-6ed8-489e-9ae6-c86cfc655f98).
+--    Reasignar las 2 facturas afectadas:
+--    UPDATE facturas SET cliente_id='4f3dbf77-6ed8-489e-9ae6-c86cfc655f98'
+--    WHERE cliente_id='98c067ab-d5da-4a37-a87a-1de66ab833de' AND tipo_factura='IVR';
+--
+-- 5. IVR-001018 (1fd463a9-0156-4794-b374-115cea58c592): legacy dice 0 pagado
+--    estado pendiente, pero aeterna ex-prod / aeterna2 tenia total_pagado=400000
+--    estado parcial sin cobros que lo respaldaran (fantasma). Reset:
+--    UPDATE facturas SET total_pagado=0, estado='pendiente'
+--    WHERE id='1fd463a9-0156-4794-b374-115cea58c592';
+--
+-- ============================================================================
+-- Pendientes de revision manual (discrepancias heredadas, no introducidas):
+-- ============================================================================
+--
+-- Facturas huerfanas sin cobros (sin info para determinar cliente):
+--   - IVR-000849 ($14.789, pendiente, cliente NULL)
+--   - IVR-000865 ($205.970, pendiente, cliente NULL)
+--
+-- Clientes con sobre-pago (cobros > total factura, probable saldo a favor real):
+--   - TOMASIELLO ANDREA EVANGELINA: 2 facturas, +$301.010
+--   - carla deheza: 1 factura, +$227.380
+--   - ELORRIAGA YANINA: 1 factura, +$123.000
+--
+-- Para los sobre-pagos: si son reales (cliente abono mas del IVR), el monto
+-- excedente deberia ir a clientes.saldo_a_favor_ivr. Si son errores (cobros
+-- mal asignados), reasignar.
+--
+-- No-op para sistema de migraciones:
+SELECT 1;

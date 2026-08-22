@@ -1,0 +1,28 @@
+{
+  "name": "aeterna",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "db:migrate": "pnpm --filter @locus/db migrate",
+    "db:setup": "pnpm --filter @locus/db setup",
+    "build:mood-plan": "tsx scripts/build-mood-plan.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
+    }
+  }
+}

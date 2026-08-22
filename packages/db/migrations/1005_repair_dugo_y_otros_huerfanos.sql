@@ -1,0 +1,50 @@
+-- Reparación de D'UGO (CLI-1321) y huérfanos varios.
+-- Sesión 2026-05-28. Cambios aplicados via SQL pipes, este archivo es documentación.
+--
+-- D'UGO (cliente bf8ffa2e-56f2-453b-81a3-e8e5e93c3837):
+-- Estado previo: saldo $981.559, 8 pendientes.
+-- Legacy: saldo $455.061, solo 2 pendientes (IVR-001053, IVR-000988).
+--
+-- Cambios:
+--
+-- 1. Redistribución de cobros mal asignados durante import original:
+--    a) Cobro 9236a44d ($177.690, 11-may): cambiado de IVR-000680 a IVR-000965
+--       (match monto exacto, IVR-000965 estaba pendiente y debía estar pagada).
+--       UPDATE cobros SET factura_id=<id_IVR-000965>
+--       WHERE id='9236a44d-2d1c-4c0e-96a8-94097da24c72';
+--       Y se borraron 2 aplicaciones residuales del rollback:
+--       DELETE FROM cobros_aplicaciones WHERE cobro_id='9236a44d-...';
+--
+--    b) Cobro f0a62d3f ($555.085, 21-feb): tenía factura_id=IVR-000791 directo.
+--       Reasignado a 4 facturas via cobros_aplicaciones (suma exacta $555.085):
+--         IVR-000727: $96.545
+--         IVR-000742: $107.632
+--         IVR-000779: $51.907
+--         IVR-000791: $299.001
+--       UPDATE cobros SET factura_id=NULL WHERE id='f0a62d3f-...';
+--       INSERT INTO cobros_aplicaciones (cobro_id, factura_id, monto_aplicado) ...
+--
+-- 2. Tres facturas IVR existen en aeterna pero NO en Supabase legacy
+--    (creadas en aeterna directamente, posible bug de import o duplicado):
+--      IVR-000680 ($342.560, 10-01): mismo monto+fecha que IVR-000679 que SI
+--        existe en legacy y está pagada. Sospecha de duplicado accidental.
+--      IVR-000807 ($33.390, 25-02): no existe en legacy bajo ningún monto.
+--      IVR-000815 ($150.548, 27-02): no existe en legacy bajo ningún monto.
+--    Decisión del usuario: marcarlas como 'pagada' (el usuario confirmó "solo
+--    1053 y 988 pendientes, el resto pagas"). Las facturas figuran legítimas
+--    en la lista, pero quedan sin cobros que las respalden:
+--      UPDATE facturas SET total_pagado=total, estado='pagada'
+--      WHERE cliente_id=<dugo> AND nro_factura IN ('IVR-000680','IVR-000807','IVR-000815');
+--
+-- Estado final D'UGO en aeterna2 = match exacto legacy:
+--    Saldo: $455.061 (era $981.559)
+--    Pendientes: 2 (IVR-001053 $87.423 + IVR-000988 $367.638)
+--    Pagadas: 12
+--    Total Cobrado en vista (= sum f.total_pagado): $2.089.259, incluye los
+--      $526.498 "fantasma" de las 3 spuriosas que se marcaron pagadas.
+--      Si en el futuro se confirman que esas 3 son spuriosas reales, se
+--      pueden anular (UPDATE estado='anulada') para que se excluyan de la
+--      vista.
+--
+-- No-op para sistema de migraciones:
+SELECT 1;

@@ -1,0 +1,123 @@
+# Papasud — ERP
+
+ERP para **Papasud**, productora de semilla de papa del sudeste bonaerense.
+Construido para la hackathon de Cursor en Mar del Plata.
+
+Tiene las dos mitades que necesita una productora: el **ERP clásico** (contactos,
+stock multi-ubicación, insumos y precios) y lo **propio del campo** (lotes,
+órdenes de trabajo, campañas, copiloto sobre el histórico).
+
+## Arrancar
+
+```bash
+cd apps/hackmdp
+cp .env.example .env.local     # completar DATABASE_URL y la clave del modelo
+npx next dev --port 3200
+```
+
+Con `DEMO_AUTOLOGIN=true` se entra derecho al panel, sin pantalla de login.
+
+## Qué incluye
+
+| Sección | Qué hace |
+|---|---|
+| **Panel** | Campaña en curso, rinde por año, estado de los lotes, stock por ubicación |
+| **Copiloto** | Preguntas en lenguaje natural sobre 20 años de histórico |
+| **Campo** | Mapa de lotes, órdenes de trabajo por voz, establecimientos, insumos y dosis |
+| **Producción** | Histórico, campañas, variedades |
+| **Contactos** | Clientes y contactos |
+| **Stock** | Cuatro ubicaciones, lotes de semilla, movimientos, conteos, reposición |
+| **Insumos y precios** | Catálogo y listas de precios |
+| **Reportes** · **Configuración** | Analytics, actividad, auditoría, alertas, aprobaciones |
+
+## Las piezas que importan
+
+### Copiloto — `app/api/copiloto/route.ts`
+
+El modelo **no recuerda los números**: escribe SQL, el SQL corre, y la respuesta se
+redacta sobre las filas que volvieron. Si la consulta no devuelve nada, se dice que
+no hay datos. La interfaz muestra la consulta y la tabla que respaldan cada
+respuesta.
+
+Tres candados sobre el SQL que escribe el modelo: solo `SELECT`, filtro de
+organización inyectado aunque el modelo se olvide, y límite de filas.
+
+### Extracción de órdenes — `lib/campo/extraccion.ts`
+
+Es el corazón del prototipo, y es **puro y determinista**. El modelo interpreta el
+dictado; quién decide qué lote, qué tarea y qué insumo son reales es esta capa,
+contra los catálogos de la base. No puede inventar un lote que no existe ni colar
+una dosis fuera de rango sin que se marque.
+
+```bash
+cd apps/hackmdp && npx tsx --test 'lib/campo/*.test.ts'   # 14 tests
+```
+
+### Mapa — `components/campo/MapaLotes.tsx`
+
+Leaflet con capa satelital. Color = estado, radio = superficie, **borde rojo
+punteado = sin orden de trabajo hace más de 21 días**.
+
+Se carga con `dynamic({ ssr: false })` porque leaflet toca `window` al importarse.
+Los colores y tipos viven aparte en `lotes-estado.ts` para poder importarlos desde
+el server sin arrastrar leaflet.
+
+## Base de datos
+
+Las migraciones de Papasud son `packages/db/migrations/12*_papasud*.sql`:
+
+| Migración | Qué hace |
+|---|---|
+| `1200_papasud.sql` | Tablas `pap_*` + vista `vista_pap_historico` |
+| `1201_papasud_seed.sql` | Organización, usuario y catálogos |
+| `1202_papasud_historico.sql` | 21 campañas y 453 filas de rendimiento |
+| `1203_papasud_stock_ot.sql` | 4 ubicaciones, ~150 lotes, conteo cíclico, órdenes |
+
+Son **idempotentes y deterministas** (`setseed`). El resto de las migraciones
+(`000`–`11xx`) son el esquema base del ERP.
+
+Los datos de Papasud que trae el seed son **sintéticos**, verosímiles pero
+inventados, con historia deliberada para que el copiloto tenga algo que encontrar:
+2009 y 2018 secos, 2012 con exceso hídrico, 2023 la mejor campaña, e Innovator
+rindiendo mejor en El Ceibo.
+
+## Trampas del dominio
+
+- **"Lote" significa dos cosas.** En el campo es la parcela (`pap_parcelas`,
+  "Lote 8"); en el depósito es un batch de semilla (`productos_lotes`). Están
+  deliberadamente separados. No los mezcles.
+- Las cantidades de stock se guardan en **kilos** (`stock_depositos` usa `integer`).
+- `stock_depositos.cantidad_total` y `conteos_ciclicos_items.diferencia` son
+  **columnas generadas**: no se insertan.
+
+## Navegación
+
+`getSidebarLinks(orgTipo)` en `lib/sidebar-links.ts` es un switch por tipo de
+organización. Papasud usa `case 'agro'`, con secciones propias en vez de reusar las
+del ERP base — las de allá traen subitems a módulos que esta app no incluye y
+quedarían links muertos.
+
+`modulos_ocultos` en `org_members.permisos` es la poda de grano fino. **Los valores
+tienen que ser del enum `Modulo`** (`lib/types/roles.ts`): se comparan contra
+`item.permission`, así que un slug de URL ahí no hace nada.
+
+## Detrás de un túnel
+
+`lib/base-url.ts` arma el origen público desde `x-forwarded-*`. Hay un detalle que
+cuesta encontrar: varios túneles terminan el TLS pero reenvían
+`x-forwarded-proto: http`, porque describen el salto interno y no el que hizo el
+navegador. Confiar en esa cabecera devuelve al visitante a `http://`, y ahí Chrome
+deja de dar micrófono — que es justo lo que necesita el dictado.
+
+## Reglas de la casa
+
+- **UI en español, sin anglicismos.**
+- **Las sheets van sólidas**: `components/ui/sheet.tsx` usa
+  `bg-white dark:bg-gray-900`. Nada de `bg-*/opacity` ni `backdrop-blur`.
+- Bottom sheets grandes antes que drawers laterales.
+
+## Proveedor del modelo
+
+`lib/ai/ai-service.ts` abstrae Groq / Gemini / Ollama. El cliente "groq" es
+compatible con OpenAI, así que apunta a **OpenRouter** cuando solo hay
+`OPENROUTER_API_KEY`. Cambiar de proveedor es una variable de entorno.

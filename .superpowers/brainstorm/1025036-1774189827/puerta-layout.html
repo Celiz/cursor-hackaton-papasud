@@ -1,0 +1,138 @@
+<h2>¿Cómo se organiza una puerta?</h2>
+<p class="subtitle">Layout de la página de puerta con tabs y contenido progresivo</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: #fafbfd;">
+      <!-- Mockup A: Tabs arriba -->
+      <div style="text-align:center; margin-bottom: 16px;">
+        <div style="font-size: 48px; opacity: 0.1; font-family: serif;">0</div>
+        <div style="font-size: 18px; font-family: serif; color: #6b7280;">Antes de todo</div>
+        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">El silencio antes del sonido</div>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex; gap:4px; background: rgba(107,114,128,0.06); border-radius: 10px; padding: 3px; margin-bottom: 16px;">
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; background: rgba(107,114,128,0.12); color: #6b7280; font-size: 12px; font-weight: 500;">Sentir</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Ver</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Entender</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Ejercicios</div>
+      </div>
+      <!-- Content flow -->
+      <div style="border-left: 2px solid rgba(107,114,128,0.15); padding-left: 16px; margin-left: 8px;">
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 4px;">Paso 1</div>
+          <div style="font-size: 12px; color: #374151; line-height: 1.6;">Cerrá los ojos. No pienses en nada...</div>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 4px;">Paso 2</div>
+          <div style="font-size: 12px; color: #374151; line-height: 1.6;">Eso que queda, ¿es nada?...</div>
+        </div>
+        <div style="margin-bottom: 14px; opacity: 0.5;">
+          <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 4px;">Paso 3 — más profundo</div>
+          <div style="font-size: 12px; color: #374151; line-height: 1.6;">La meditación como tecnología del 0...</div>
+        </div>
+        <div style="margin-bottom: 14px; opacity: 0.3;">
+          <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 4px;">Paso 4 — academia</div>
+          <div style="font-size: 12px; color: #374151; line-height: 1.6;">Estados alterados de conciencia...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Flujo continuo</h3>
+      <p>Tabs arriba, contenido fluye de simple a profundo sin cortes. Los pasos más profundos aparecen con menos opacidad, invitando a seguir sin obligar. Todo en una sola página scrolleable.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: #fafbfd;">
+      <!-- Mockup B: Capítulos colapsables -->
+      <div style="text-align:center; margin-bottom: 16px;">
+        <div style="font-size: 48px; opacity: 0.1; font-family: serif;">0</div>
+        <div style="font-size: 18px; font-family: serif; color: #6b7280;">Antes de todo</div>
+        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">El silencio antes del sonido</div>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex; gap:4px; background: rgba(107,114,128,0.06); border-radius: 10px; padding: 3px; margin-bottom: 16px;">
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; background: rgba(107,114,128,0.12); color: #6b7280; font-size: 12px; font-weight: 500;">Sentir</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Ver</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Entender</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Ejercicios</div>
+      </div>
+      <!-- Chapters -->
+      <div style="margin-bottom: 10px; border: 1px solid rgba(107,114,128,0.12); border-radius: 10px; padding: 14px;">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 13px; color: #374151; font-weight: 500;">El instante antes</div>
+            <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">3 pasos · 5 min lectura</div>
+          </div>
+          <div style="font-size: 11px; color: #6b7280;">▼</div>
+        </div>
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(107,114,128,0.08);">
+          <div style="font-size: 12px; color: #374151; line-height: 1.7;">Cerrá los ojos. No pienses en nada. No hagas nada. ¿Qué queda?...</div>
+        </div>
+      </div>
+      <div style="margin-bottom: 10px; border: 1px solid rgba(107,114,128,0.08); border-radius: 10px; padding: 14px;">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 13px; color: #9ca3af; font-weight: 500;">La diferencia entre vacío y posibilidad</div>
+            <div style="font-size: 11px; color: #d1d5db; margin-top: 2px;">4 pasos · 8 min lectura</div>
+          </div>
+          <div style="font-size: 11px; color: #d1d5db;">▶</div>
+        </div>
+      </div>
+      <div style="margin-bottom: 10px; border: 1px solid rgba(107,114,128,0.06); border-radius: 10px; padding: 14px;">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 13px; color: #d1d5db; font-weight: 500;">La conciencia antes de observarse</div>
+            <div style="font-size: 11px; color: #e5e7eb; margin-top: 2px;">6 pasos · 15 min lectura</div>
+          </div>
+          <div style="font-size: 11px; color: #e5e7eb;">▶</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Capítulos expandibles</h3>
+      <p>Tabs arriba, pero dentro de cada tab el contenido se agrupa en capítulos que se abren/cierran. Los más profundos se ven más tenues. Podés abrir solo lo que te interesa sin scroll infinito.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 24px; background: #fafbfd;">
+      <!-- Mockup C: Pages/steps -->
+      <div style="text-align:center; margin-bottom: 16px;">
+        <div style="font-size: 48px; opacity: 0.1; font-family: serif;">0</div>
+        <div style="font-size: 18px; font-family: serif; color: #6b7280;">Antes de todo</div>
+        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">El silencio antes del sonido</div>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex; gap:4px; background: rgba(107,114,128,0.06); border-radius: 10px; padding: 3px; margin-bottom: 16px;">
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; background: rgba(107,114,128,0.12); color: #6b7280; font-size: 12px; font-weight: 500;">Sentir</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Ver</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Entender</div>
+        <div style="flex:1; text-align:center; padding: 8px; border-radius: 8px; color: rgba(107,114,128,0.45); font-size: 12px;">Ejercicios</div>
+      </div>
+      <!-- Step navigation -->
+      <div style="display:flex; gap: 6px; margin-bottom: 16px; align-items: center;">
+        <div style="width: 24px; height: 24px; border-radius: 50%; background: #6b7280; color: white; font-size: 10px; display:flex; align-items:center; justify-content:center;">1</div>
+        <div style="flex:1; height: 1px; background: rgba(107,114,128,0.2);"></div>
+        <div style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(107,114,128,0.25); color: #9ca3af; font-size: 10px; display:flex; align-items:center; justify-content:center;">2</div>
+        <div style="flex:1; height: 1px; background: rgba(107,114,128,0.1);"></div>
+        <div style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(107,114,128,0.15); color: #d1d5db; font-size: 10px; display:flex; align-items:center; justify-content:center;">3</div>
+        <div style="flex:1; height: 1px; background: rgba(107,114,128,0.1);"></div>
+        <div style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(107,114,128,0.1); color: #e5e7eb; font-size: 10px; display:flex; align-items:center; justify-content:center;">4</div>
+      </div>
+      <!-- Single step content -->
+      <div style="padding: 20px; background: rgba(107,114,128,0.03); border-radius: 12px; border: 1px solid rgba(107,114,128,0.08);">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 8px;">Paso 1 — El instante antes</div>
+        <div style="font-size: 13px; color: #374151; line-height: 1.8; margin-bottom: 16px;">Cerrá los ojos. No pienses en nada. No hagas nada.<br><br>¿Qué queda?<br><br>No "nada" — porque "nada" ya es una idea. Lo que queda es más sutil: la posibilidad de que algo pase.</div>
+        <div style="display: flex; justify-content: flex-end;">
+          <div style="font-size: 12px; color: #6b7280; padding: 6px 16px; border: 1px solid rgba(107,114,128,0.2); border-radius: 8px;">Siguiente →</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Pasos paginados</h3>
+      <p>Tabs arriba, y dentro de cada tab los pasos se navegan uno a uno con "siguiente". Como un libro donde pasás la página. Foco total en un concepto a la vez. Los pasos más profundos se van desbloqueando.</p>
+    </div>
+  </div>
+</div>

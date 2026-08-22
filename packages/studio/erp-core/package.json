@@ -1,0 +1,20 @@
+{
+  "name": "@studio/erp-core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./organizations": "./src/organizations/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./agencias": "./src/agencias/index.ts",
+    "./turnos": "./src/turnos/index.ts",
+    "./animales": "./src/animales/index.ts",
+    "./grooming": "./src/grooming/index.ts"
+  },
+  "dependencies": {
+    "@locus/db": "workspace:*",
+    "@locus/core": "workspace:*",
+    "zod": "^3.24.0"
+  }
+}

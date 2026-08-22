@@ -1,0 +1,16 @@
+{
+  "name": "@studio/fiscal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ar": "./src/providers/ar/index.ts",
+    "./es": "./src/providers/es/index.ts"
+  },
+  "dependencies": {
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "zod": "^3.24.0"
+  }
+}
