@@ -7,13 +7,13 @@
 import * as ollama from './ollama-client';
 import * as gemini from './gemini-client';
 import * as groq from './groq-client';
-import type { ToolCall, ToolDefinition, ChatOptions } from './groq-client';
+import type { ToolCall, ToolDefinition, ChatOptions, ContentPart } from './groq-client';
 
 export type AIProvider = 'gemini' | 'ollama' | 'groq';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
+  content: string | ContentPart[] | null;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
@@ -27,7 +27,7 @@ export interface AIStatus {
 }
 
 // Re-export types for consumers
-export type { ToolCall, ToolDefinition, ChatOptions };
+export type { ToolCall, ToolDefinition, ChatOptions, ContentPart };
 
 /**
  * Get the configured AI provider
@@ -78,11 +78,26 @@ export async function chat(
 
   const activeProvider = provider || getProvider();
 
+  /**
+   * Gemini y Ollama, tal como están integrados acá, solo aceptan texto. Si un
+   * mensaje viene multimodal se conserva el texto y se deja constancia de la
+   * imagen descartada, en vez de mandar "[object Object]" al modelo.
+   */
+  const aTexto = (c: ChatMessage['content']): string => {
+    if (typeof c === 'string') return c;
+    if (!c) return '';
+    return c
+      .map((parte) =>
+        parte.type === 'text' ? parte.text : '[imagen omitida: este proveedor no acepta visión]'
+      )
+      .join('\n');
+  };
+
   if (activeProvider === 'gemini') {
     // Gemini doesn't support tools in our current implementation
     const geminiMessages = messages.map(m => ({
       role: m.role as 'system' | 'user' | 'assistant',
-      content: m.content || '',
+      content: aTexto(m.content),
     }));
     return gemini.chat(geminiMessages);
   }
@@ -102,7 +117,7 @@ export async function chat(
   // Ollama - doesn't support tools
   const ollamaMessages = messages.map(m => ({
     role: m.role as 'system' | 'user' | 'assistant',
-    content: m.content || '',
+    content: aTexto(m.content),
   }));
 
   const response = await ollama.chat(ollamaMessages);
@@ -118,6 +133,21 @@ export async function chat(
  */
 export async function checkStatus(provider?: AIProvider): Promise<AIStatus> {
   const activeProvider = provider || getProvider();
+
+  /**
+   * Gemini y Ollama, tal como están integrados acá, solo aceptan texto. Si un
+   * mensaje viene multimodal se conserva el texto y se deja constancia de la
+   * imagen descartada, en vez de mandar "[object Object]" al modelo.
+   */
+  const aTexto = (c: ChatMessage['content']): string => {
+    if (typeof c === 'string') return c;
+    if (!c) return '';
+    return c
+      .map((parte) =>
+        parte.type === 'text' ? parte.text : '[imagen omitida: este proveedor no acepta visión]'
+      )
+      .join('\n');
+  };
 
   if (activeProvider === 'gemini') {
     const status = await gemini.checkGeminiStatus();

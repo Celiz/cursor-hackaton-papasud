@@ -14,9 +14,18 @@ const GROQ_API_URL = process.env.GROQ_API_KEY
   ? 'https://api.groq.com/openai/v1/chat/completions'
   : 'https://openrouter.ai/api/v1/chat/completions';
 
+/**
+ * Partes de contenido para mensajes multimodales. El formato es el de OpenAI,
+ * que respetan tanto Groq como OpenRouter: un array mezclando texto e imágenes.
+ * La imagen va como data URI en base64 o como URL pública.
+ */
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'low' | 'high' | 'auto' } };
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | null;
+  content: string | ContentPart[] | null;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;

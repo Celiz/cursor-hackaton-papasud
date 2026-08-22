@@ -1918,6 +1918,7 @@ const AGRO_SECTION_CAMPO: Section = {
   url: `/dashboard/campo/pivotes`,
   items: [
     { title: "Pivotes", url: `/dashboard/campo/pivotes`, icon: Target },
+    { title: "Foto del cultivo", url: `/dashboard/campo/foto`, icon: Eye },
     { title: "Mapa de lotes", url: `/dashboard/campo/mapa`, icon: MapPin },
     { title: "Lotes", url: `/dashboard/campo/lotes`, icon: Leaf },
     { title: "Órdenes de trabajo", url: `/dashboard/campo/ordenes`, icon: ClipboardList },
